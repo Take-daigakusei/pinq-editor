@@ -637,7 +637,8 @@
               
               <div style="margin-bottom:6px;">
                 <label class="form-label">号名（サブタイトル）</label>
-                <input type="text" class="form-input" id="afterwordIssueName" value="〜早慶戦号〜" oninput="debounceRefresh()">
+                <input type="text" class="form-input" id="afterwordIssueName" value="" placeholder="早慶戦号" oninput="debounceRefresh()">
+                <span style="font-size:0.72rem; color:#94a3b8; margin-top:2px; display:block;">入力すると自動で「〜早慶戦号〜」の形式になります</span>
               </div>
 
               <div style="margin-bottom:6px;">
@@ -647,7 +648,7 @@
 
               <div style="margin-bottom:6px;">
                 <label class="form-label">発行責任者</label>
-                <input type="text" class="form-input" id="afterwordPublisher" placeholder="例: 会長 〇〇" oninput="debounceRefresh()">
+                <input type="text" class="form-input" id="afterwordPublisher" placeholder="例: 山田太郎" oninput="debounceRefresh()">
               </div>
 
               <div>
@@ -883,7 +884,7 @@
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:0.75rem; color:#475569; font-weight:600; white-space:nowrap;">総務名:</span>
-            <input type="text" class="form-input" placeholder="例: 姓 名" value="${c.author}" oninput="updateCommentAuthor(${idx}, this.value)">
+            <input type="text" class="form-input" placeholder="例: 山田太郎" value="${c.author}" oninput="updateCommentAuthor(${idx}, this.value)">
           </div>
         `;
         container.appendChild(div);
@@ -1402,7 +1403,8 @@
       ctx.fillStyle = '#000000';
 
       const magName = '会内報（ぴん球）';
-      const issueName = document.getElementById('afterwordIssueName').value || '〜早慶戦号〜';
+      const rawIssueName = document.getElementById('afterwordIssueName').value.trim();
+      const issueName = rawIssueName ? `〜${rawIssueName}〜` : '';
       const dateStr = document.getElementById('afterwordDate').value || '';
       const pubName = document.getElementById('afterwordPublisher').value || '';
 
@@ -1474,20 +1476,21 @@
     }
 
     // 全ページを縦並びで描画（スクロールモード用）
+    let _renderAllPagesRunning = false;
     async function renderAllPages() {
+      if (_renderAllPagesRunning) return;
+      _renderAllPagesRunning = true;
+      try {
       const allPagesContainer = document.getElementById('allPagesContainer');
       allPagesContainer.innerHTML = '';
-      if (combinedPages.length === 0) return;
+      if (combinedPages.length === 0) { _renderAllPagesRunning = false; return; }
 
       const viewportDiv = document.getElementById('previewViewport');
+      // スクロールモードは常に幅いっぱいに表示（高さ制限なし・縦スクロール）
       const availW = Math.max(200, viewportDiv.clientWidth - 16);
-      const isMobile = window.innerWidth <= 768;
-      const fitScale = isMobile
-        ? (availW / targetPdfWidth)
-        : Math.min(availW / targetPdfWidth, (viewportDiv.clientHeight * 0.85) / targetPdfHeight);
-      const displayScale = fitScale * userZoomFactor;
-      const cssW = Math.floor(targetPdfWidth * displayScale);
-      const cssH = Math.floor(targetPdfHeight * displayScale);
+      const fitScale = (availW / targetPdfWidth) * userZoomFactor;
+      const cssW = Math.floor(targetPdfWidth * fitScale);
+      const cssH = Math.floor(targetPdfHeight * fitScale);
       const dpr = Math.max(2.0, window.devicePixelRatio || 2.0);
 
       for (let pIdx = 0; pIdx < combinedPages.length; pIdx++) {
@@ -1528,15 +1531,15 @@
 
         // ページ描画
         if (pageInfo.type === '編集後記') {
-          drawExactAfterword(ctx, cssW, cssH, displayScale);
+          drawExactAfterword(ctx, cssW, cssH, fitScale);
         } else if (pageInfo.isImage) {
           try {
             const img = await loadImageFromFile(pageInfo.file);
             const imgW = img.width || img.naturalWidth;
             const imgH = img.height || img.naturalHeight;
             const fitS = Math.max(targetPdfWidth / imgW, targetPdfHeight / imgH);
-            const drawW = imgW * fitS * displayScale;
-            const drawH = imgH * fitS * displayScale;
+            const drawW = imgW * fitS * fitScale;
+            const drawH = imgH * fitS * fitScale;
             const offX = (cssW - drawW) / 2;
             const offY = (cssH - drawH) / 2;
             ctx.save();
@@ -1553,15 +1556,15 @@
             const page = await pdf.getPage(pageInfo.pageIndex);
             const origViewport = page.getViewport({ scale: 1.0 });
             const fitS = Math.min(targetPdfWidth / origViewport.width, targetPdfHeight / origViewport.height);
-            const drawW = origViewport.width * fitS * displayScale;
-            const drawH = origViewport.height * fitS * displayScale;
+            const drawW = origViewport.width * fitS * fitScale;
+            const drawH = origViewport.height * fitS * fitScale;
             const offX = (cssW - drawW) / 2;
             const offY = (cssH - drawH) / 2;
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = Math.floor(drawW * dpr);
             tempCanvas.height = Math.floor(drawH * dpr);
             const tempCtx = tempCanvas.getContext('2d');
-            const renderViewport = page.getViewport({ scale: fitS * displayScale * dpr });
+            const renderViewport = page.getViewport({ scale: fitS * fitScale * dpr });
             await page.render({ canvasContext: tempCtx, viewport: renderViewport }).promise;
             ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, offX, offY, drawW, drawH);
           } catch (err) { console.error(err); }
@@ -1572,10 +1575,13 @@
         if (pageRedacts.length > 0) {
           ctx.fillStyle = '#000000';
           for (let r of pageRedacts) {
-            ctx.fillRect(r.x * displayScale, r.y * displayScale, r.w * displayScale, r.h * displayScale);
+            ctx.fillRect(r.x * fitScale, r.y * fitScale, r.w * fitScale, r.h * fitScale);
           }
         }
         ctx.restore();
+      }
+      } finally {
+        _renderAllPagesRunning = false;
       }
     }
 
@@ -1802,7 +1808,8 @@
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const blobUrl = URL.createObjectURL(blob);
 
-        const issueName = document.getElementById('afterwordIssueName').value.trim() || '最新号';
+        const rawIssueName = document.getElementById('afterwordIssueName').value.trim();
+        const issueName = rawIssueName ? `〜${rawIssueName}〜` : '';
         const fileName = `ぴん球${issueName}　完成版.pdf`;
 
         showToast("発行完了！🎉", "✅");
