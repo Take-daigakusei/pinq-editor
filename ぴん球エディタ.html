@@ -626,7 +626,7 @@
             
             <div style="margin-bottom:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span class="form-label" style="margin-bottom:0; font-weight:700;">執筆コメント（実名が編集責任者に連動）</span>
+                <span class="form-label" style="margin-bottom:0; font-weight:700;">執筆コメント（総務名が編集責任者に連動）</span>
                 <button type="button" class="btn-icon" onclick="addCommentBlock()" style="color:var(--primary); font-weight:700; font-size:0.78rem;">＋ コメント枠を追加</button>
               </div>
               <div id="commentsContainer"></div>
@@ -635,29 +635,23 @@
             <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #cbd5e1;">
               <span class="form-label" style="color:#1e293b; font-weight:700; margin-bottom:6px;">📄 右下の発行情報枠（奥付）</span>
               
-              <div style="display:flex; gap:6px; margin-bottom:6px;">
-                <div style="flex:1;">
-                  <label class="form-label">サークル誌名</label>
-                  <input type="text" class="form-input" id="afterwordMagazineName" value="会内報（ぴん球）" oninput="debounceRefresh()">
-                </div>
-                <div style="flex:1;">
-                  <label class="form-label">号名（サブタイトル）</label>
-                  <input type="text" class="form-input" id="afterwordIssueName" value="〜早慶戦号〜" oninput="debounceRefresh()">
-                </div>
+              <div style="margin-bottom:6px;">
+                <label class="form-label">号名（サブタイトル）</label>
+                <input type="text" class="form-input" id="afterwordIssueName" value="〜早慶戦号〜" oninput="debounceRefresh()">
               </div>
 
               <div style="margin-bottom:6px;">
                 <label class="form-label">発行日</label>
-                <input type="text" class="form-input" id="afterwordDate" oninput="debounceRefresh()">
+                <input type="text" class="form-input" id="afterwordDate" readonly style="background:#e2e8f0; color:#475569; cursor:default;">
               </div>
 
               <div style="margin-bottom:6px;">
-                <label class="form-label">発行責任者（実名）</label>
+                <label class="form-label">発行責任者</label>
                 <input type="text" class="form-input" id="afterwordPublisher" placeholder="例: 会長 〇〇" oninput="debounceRefresh()">
               </div>
 
               <div>
-                <label class="form-label">編集責任者（コメント欄の執筆者名が自動反映されます）</label>
+                <label class="form-label">編集責任者（コメント欄の総務名が自動反映されます）</label>
                 <div id="editorsDisplayList" style="font-size:0.8rem; color:#475569; padding:4px 8px; background:#e2e8f0; border-radius:4px;"></div>
               </div>
             </div>
@@ -731,6 +725,9 @@
       </div>
 
       <div class="preview-viewport" id="previewViewport">
+        <!-- スクロールモード: 全ページ縦一覧 -->
+        <div id="allPagesContainer" style="display:none; flex-direction:column; align-items:center; gap:8px; padding:8px 4px; width:100%;"></div>
+        <!-- 黒塗りモード: 1ページ表示 -->
         <div class="canvas-container" id="canvasContainer">
           <canvas id="previewCanvas"></canvas>
           <div id="selectionBox"></div>
@@ -833,14 +830,8 @@
     let startY = 0;
 
     let comments = [
-      {
-        body: "このサークル野球好き多くない？毎回野球の話についていけない総務の悲痛な叫びです。はまそうの文章も野球知ってればもっと面白いんだろうな...　ちなみに早慶戦には行けません。野球に興味がないからではなく日本酒のイベントに行くからです。早稲田が勝ったら教えてくださいね。アテにします。",
-        author: "北野 〇〇"
-      },
-      {
-        body: "ストライクとボールが何度聞いても理解できません。とりあえず打って走ればいいんでしたっけ、野球のルールがなんとなくしか分かりませんが、早慶戦観戦を今年も楽しみにしています。みんな熱中症には気をつけてね。",
-        author: "佐野 〇〇"
-      }
+      { body: "", author: "" },
+      { body: "", author: "" }
     ];
 
     // スマホのダブルタップによる意図しない画面拡大（ズーム）を完全防止
@@ -861,7 +852,7 @@
       const m = today.getMonth() + 1;
       const d = today.getDate();
       document.getElementById('afterwordDate').value = `${y}年${m}月${d}日発行`;
-      document.getElementById('afterwordPublisher').value = "会長 〇〇";
+      document.getElementById('afterwordPublisher').value = "";
       
       // LINEアプリ内ブラウザ検知案内
       if (/Line\//i.test(navigator.userAgent)) {
@@ -891,7 +882,7 @@
             <textarea class="form-textarea" rows="3" placeholder="コメント本文を入力..." oninput="updateCommentBody(${idx}, this.value)">${c.body}</textarea>
           </div>
           <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:0.75rem; color:#475569; font-weight:600; white-space:nowrap;">執筆者（実名）:</span>
+            <span style="font-size:0.75rem; color:#475569; font-weight:600; white-space:nowrap;">総務名:</span>
             <input type="text" class="form-input" placeholder="例: 姓 名" value="${c.author}" oninput="updateCommentAuthor(${idx}, this.value)">
           </div>
         `;
@@ -1170,7 +1161,15 @@
         currentPageIndex = Math.max(0, combinedPages.length - 1);
       }
 
-      renderCurrentPage();
+      if (editorMode === 'scroll') {
+        const allPagesContainer = document.getElementById('allPagesContainer');
+        const canvasContainer = document.getElementById('canvasContainer');
+        allPagesContainer.style.display = 'flex';
+        canvasContainer.style.display = 'none';
+        renderAllPages();
+      } else {
+        renderCurrentPage();
+      }
     }
 
     function updateToolbarInfo() {
@@ -1402,7 +1401,7 @@
       ctx.font = `${boxFontSize}px ${serifFont}`;
       ctx.fillStyle = '#000000';
 
-      const magName = document.getElementById('afterwordMagazineName').value || '会内報（ぴん球）';
+      const magName = '会内報（ぴん球）';
       const issueName = document.getElementById('afterwordIssueName').value || '〜早慶戦号〜';
       const dateStr = document.getElementById('afterwordDate').value || '';
       const pubName = document.getElementById('afterwordPublisher').value || '';
@@ -1454,24 +1453,129 @@
       editorMode = mode;
       const btnScroll = document.getElementById('btnModeScroll');
       const btnRedact = document.getElementById('btnModeRedact');
-      const canvas = document.getElementById('previewCanvas');
+      const allPagesContainer = document.getElementById('allPagesContainer');
+      const canvasContainer = document.getElementById('canvasContainer');
 
       if (mode === 'redact') {
         if (btnScroll) btnScroll.classList.remove('active');
         if (btnRedact) btnRedact.classList.add('active', 'active-redact');
-        if (canvas) {
-          canvas.style.touchAction = 'none';
-          canvas.style.cursor = 'crosshair';
-        }
+        allPagesContainer.style.display = 'none';
+        canvasContainer.style.display = 'block';
+        renderCurrentPage();
         showToast("黒塗りモード（ドラッグで囲む）", "✏️");
       } else {
         if (btnScroll) btnScroll.classList.add('active');
         if (btnRedact) btnRedact.classList.remove('active', 'active-redact');
-        if (canvas) {
-          canvas.style.touchAction = 'pan-y pan-x';
-          canvas.style.cursor = 'default';
+        canvasContainer.style.display = 'none';
+        allPagesContainer.style.display = 'flex';
+        renderAllPages();
+        showToast("スクロール閲覧モード（全ページ一覧）", "🖐️");
+      }
+    }
+
+    // 全ページを縦並びで描画（スクロールモード用）
+    async function renderAllPages() {
+      const allPagesContainer = document.getElementById('allPagesContainer');
+      allPagesContainer.innerHTML = '';
+      if (combinedPages.length === 0) return;
+
+      const viewportDiv = document.getElementById('previewViewport');
+      const availW = Math.max(200, viewportDiv.clientWidth - 16);
+      const isMobile = window.innerWidth <= 768;
+      const fitScale = isMobile
+        ? (availW / targetPdfWidth)
+        : Math.min(availW / targetPdfWidth, (viewportDiv.clientHeight * 0.85) / targetPdfHeight);
+      const displayScale = fitScale * userZoomFactor;
+      const cssW = Math.floor(targetPdfWidth * displayScale);
+      const cssH = Math.floor(targetPdfHeight * displayScale);
+      const dpr = Math.max(2.0, window.devicePixelRatio || 2.0);
+
+      for (let pIdx = 0; pIdx < combinedPages.length; pIdx++) {
+        const pageInfo = combinedPages[pIdx];
+
+        // ページラベル
+        const label = document.createElement('div');
+        label.style.cssText = 'font-size:0.72rem; color:#94a3b8; margin-bottom:2px; align-self:flex-start; margin-left:4px;';
+        const sub = pageInfo.pageIndex ? ` (P.${pageInfo.pageIndex})` : '';
+        label.textContent = `【${pageInfo.type}】${pageInfo.name}${sub}`;
+        allPagesContainer.appendChild(label);
+
+        // キャンバス生成
+        const canvas = document.createElement('canvas');
+        canvas.style.width = `${cssW}px`;
+        canvas.style.height = `${cssH}px`;
+        canvas.width = Math.floor(cssW * dpr);
+        canvas.height = Math.floor(cssH * dpr);
+        canvas.style.display = 'block';
+        canvas.style.borderRadius = '2px';
+        canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+        canvas.style.touchAction = 'pan-y pan-x';
+        canvas.style.cursor = 'default';
+        // クリックで黒塗りモードに切り替えてそのページを選択
+        (function(idx) {
+          canvas.addEventListener('click', () => {
+            currentPageIndex = idx;
+            setEditorMode('redact');
+          });
+        })(pIdx);
+        allPagesContainer.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.scale(dpr, dpr);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, cssW, cssH);
+
+        // ページ描画
+        if (pageInfo.type === '編集後記') {
+          drawExactAfterword(ctx, cssW, cssH, displayScale);
+        } else if (pageInfo.isImage) {
+          try {
+            const img = await loadImageFromFile(pageInfo.file);
+            const imgW = img.width || img.naturalWidth;
+            const imgH = img.height || img.naturalHeight;
+            const fitS = Math.max(targetPdfWidth / imgW, targetPdfHeight / imgH);
+            const drawW = imgW * fitS * displayScale;
+            const drawH = imgH * fitS * displayScale;
+            const offX = (cssW - drawW) / 2;
+            const offY = (cssH - drawH) / 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, 0, cssW, cssH);
+            ctx.clip();
+            ctx.drawImage(img, offX, offY, drawW, drawH);
+            ctx.restore();
+          } catch (err) { console.error(err); }
+        } else {
+          try {
+            const ab = await pageInfo.file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            const page = await pdf.getPage(pageInfo.pageIndex);
+            const origViewport = page.getViewport({ scale: 1.0 });
+            const fitS = Math.min(targetPdfWidth / origViewport.width, targetPdfHeight / origViewport.height);
+            const drawW = origViewport.width * fitS * displayScale;
+            const drawH = origViewport.height * fitS * displayScale;
+            const offX = (cssW - drawW) / 2;
+            const offY = (cssH - drawH) / 2;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = Math.floor(drawW * dpr);
+            tempCanvas.height = Math.floor(drawH * dpr);
+            const tempCtx = tempCanvas.getContext('2d');
+            const renderViewport = page.getViewport({ scale: fitS * displayScale * dpr });
+            await page.render({ canvasContext: tempCtx, viewport: renderViewport }).promise;
+            ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, offX, offY, drawW, drawH);
+          } catch (err) { console.error(err); }
         }
-        showToast("スクロール閲覧モード", "🖐️");
+
+        // 黒塗り表示
+        const pageRedacts = redactions[pIdx] || [];
+        if (pageRedacts.length > 0) {
+          ctx.fillStyle = '#000000';
+          for (let r of pageRedacts) {
+            ctx.fillRect(r.x * displayScale, r.y * displayScale, r.w * displayScale, r.h * displayScale);
+          }
+        }
+        ctx.restore();
       }
     }
 
@@ -1698,11 +1802,8 @@
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const blobUrl = URL.createObjectURL(blob);
 
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const d = String(today.getDate()).padStart(2, '0');
-        const fileName = `ぴん球_完成版_${y}${m}${d}.pdf`;
+        const issueName = document.getElementById('afterwordIssueName').value.trim() || '最新号';
+        const fileName = `ぴん球${issueName}　完成版.pdf`;
 
         showToast("発行完了！🎉", "✅");
 
@@ -1740,7 +1841,6 @@
         try {
           await navigator.share({
             files: [file],
-            title: currentPdfFileName,
           });
           return;
         } catch (err) {
@@ -1760,7 +1860,8 @@
     }
 
     window.addEventListener('resize', () => {
-      renderCurrentPage();
+      if (editorMode === 'scroll') renderAllPages();
+      else renderCurrentPage();
     });
   </script>
 </body>
