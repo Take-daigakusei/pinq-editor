@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>サークル誌「ぴん球」PDFエディタ - スマホ＆PC対応</title>
   
   <base target="_top">
@@ -37,6 +37,12 @@
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
     }
 
     body {
@@ -388,10 +394,12 @@
     .preview-viewport {
       flex: 1;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       overflow: auto;
-      padding: 12px;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 10px;
       position: relative;
       background: #1e293b;
     }
@@ -401,14 +409,46 @@
       background: white;
       line-height: 0;
       user-select: none;
-      touch-action: none;
-      margin: auto;
+      margin: auto 0;
+      flex-shrink: 0;
     }
     #previewCanvas {
       display: block;
-      cursor: crosshair;
-      touch-action: none;
+      cursor: default;
+      touch-action: pan-y pan-x;
       /* 高DPI対応: 表示サイズはstyleで制御し内部バッファを高解像度化 */
+    }
+
+    .toolbar-mode-group {
+      display: inline-flex;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #64748b;
+      background: #334155;
+      margin-right: 4px;
+    }
+    .btn-mode {
+      background: #334155;
+      color: #cbd5e1;
+      border: none;
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.15s ease;
+      min-height: 34px;
+      touch-action: manipulation;
+    }
+    .btn-mode.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-mode.active-redact {
+      background: #ea580c;
+      color: #ffffff;
     }
 
     #selectionBox {
@@ -653,6 +693,11 @@
           <span class="source-tag" id="lblPageSource">（未読込）</span>
         </div>
         <div class="toolbar-right">
+          <!-- モード切替: スクロール vs 黒塗り -->
+          <div class="toolbar-mode-group">
+            <button type="button" class="btn-mode active" id="btnModeScroll" onclick="setEditorMode('scroll')">🖐️ スクロール</button>
+            <button type="button" class="btn-mode" id="btnModeRedact" onclick="setEditorMode('redact')">✏️ 黒塗り</button>
+          </div>
           <!-- 拡大率コントロール -->
           <div style="display:flex; align-items:center; background:#334155; border-radius:4px; border:1px solid #64748b; margin-right:4px;">
             <button class="page-nav-btn" style="border:none; padding:4px 8px;" onclick="zoomPreview(-0.25)">🔍-</button>
@@ -664,8 +709,8 @@
         </div>
       </div>
 
-      <div class="guide-banner">
-        <span>💡 画面上を<b>指やマウスでドラッグして四角で囲む</b>と黒塗り（墨消し）できます。拡大ボタンで文字を大きくできます。</span>
+      <div class="guide-banner" id="guideBanner">
+        <span id="guideText">💡 <b>【スクロール閲覧中】</b> 画面を指でスワイプして上下左右に自由にスクロールできます。黒塗りしたい時は上の「✏️ 黒塗り」を押してください。</span>
       </div>
 
       <div class="preview-viewport" id="previewViewport">
@@ -780,6 +825,18 @@
         author: "佐野 〇〇"
       }
     ];
+
+    // スマホのダブルタップによる意図しない画面拡大（ズーム）を完全防止
+    let lastTouchEndTime = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTouchEndTime <= 300) {
+        if (!['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'].includes(e.target.tagName)) {
+          e.preventDefault();
+        }
+      }
+      lastTouchEndTime = now;
+    }, { passive: false });
 
     window.addEventListener('DOMContentLoaded', () => {
       const today = new Date();
@@ -1141,11 +1198,15 @@
       const ctx = canvas.getContext('2d');
 
       const viewportDiv = document.getElementById('previewViewport');
-      const availW = Math.max(200, viewportDiv.clientWidth - 32);
-      const availH = Math.max(200, viewportDiv.clientHeight - 32);
+      const availW = Math.max(200, viewportDiv.clientWidth - 24);
+      const availH = Math.max(200, viewportDiv.clientHeight - 24);
 
-      // 表示基準スケール（ビューポートにフィット × ユーザー拡大率）
-      const fitScale = Math.min(availW / targetPdfWidth, availH / targetPdfHeight);
+      // スマホでは画面幅（availW）基準にして縦スクロールで読みやすく表示、PCでは画面全体に収める
+      const isMobile = window.innerWidth <= 768;
+      const fitScale = isMobile
+        ? (availW / targetPdfWidth)
+        : Math.min(availW / targetPdfWidth, availH / targetPdfHeight);
+
       const displayScale = fitScale * userZoomFactor;
 
       // CSS上の表示サイズ
@@ -1159,6 +1220,10 @@
       canvas.style.height = `${cssH}px`;
       canvas.width = Math.floor(cssW * dpr);
       canvas.height = Math.floor(cssH * dpr);
+
+      // モードに応じたタッチアクションとカーソル設定
+      canvas.style.touchAction = (editorMode === 'redact') ? 'none' : 'pan-y pan-x';
+      canvas.style.cursor = (editorMode === 'redact') ? 'crosshair' : 'default';
 
       // 内部描画コンテキストを dpr 倍にスケール設定
       ctx.save();
@@ -1230,27 +1295,26 @@
     // ========================================================
     // 🎨 見本画像完全一致：編集後記レンダリング
     // - A4（595.28pt）に対する黄金比率:
-    //   タイトル 16.5pt, 本文 9.3pt, 行送り 20.5pt, 奥付 8.0pt
-    //   初期（10.5pt）より小さく、直前（8.2pt）より少し大きめで視認性と品格を両立
+    //   タイトル 17.5pt, 本文 11.0pt, 行送り 23.5pt, 奥付 8.5pt
     // ========================================================
     function drawExactAfterword(ctx, w, h, scale) {
       const serifFont = '"Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Georgia", serif';
 
-      // 1. タイトル「編  集  後  記」（16.5pt、上品なサイズと文字間隔）
+      // 1. タイトル「編  集  後  記」（17.5pt、上品なサイズと文字間隔）
       ctx.fillStyle = '#000000';
       ctx.textAlign = 'center';
-      const titleSize = 16.5 * scale;
+      const titleSize = 17.5 * scale;
       ctx.font = `${titleSize}px ${serifFont}`;
-      const titleY = 140 * scale;
+      const titleY = 130 * scale;
       ctx.fillText("編  集  後  記", w / 2, titleY);
 
-      // 2. 本文コメントエリア（左右マージン約 88pt）
-      const marginX = 88 * scale;
+      // 2. 本文コメントエリア（左右マージン約 85pt）
+      const marginX = 85 * scale;
       const contentWidth = w - marginX * 2;
-      let curY = 220 * scale;
+      let curY = 210 * scale;
 
-      const bodySize = 9.3 * scale;
-      const lineHeight = 20.5 * scale; // 行送り 20.5pt（文字重なりゼロの快適な行間）
+      const bodySize = 11.0 * scale;
+      const lineHeight = 23.5 * scale; // 行送り 23.5pt（11ptフォントに最適なゆったり行間・重なりゼロ）
       
       ctx.fillStyle = '#111111';
       ctx.font = `${bodySize}px ${serifFont}`;
@@ -1293,23 +1357,23 @@
           ctx.fillStyle = '#000000';
           ctx.fillText(c.author, w - marginX, curY);
           ctx.restore();
-          curY += 50 * scale; // 次のコメントとの十分な余白
+          curY += 46 * scale; // 次のコメントとの十分な余白
         } else {
           curY += 32 * scale;
         }
       });
 
-      // 3. 右下の奥付ボックス（152pt × 自動高さ）
+      // 3. 右下の奥付ボックス（158pt × 自動高さ）
       const validEditors = comments.map(c => c.author.trim()).filter(a => a.length > 0);
       const editors = validEditors.length > 0 ? validEditors : ['　　　　'];
 
-      const boxW = 152 * scale;
-      const boxLineH = 15 * scale;
+      const boxW = 158 * scale;
+      const boxLineH = 16 * scale;
       const lineCount = 3 + 1 + editors.length;
-      const boxH = (26 + lineCount * 15) * scale;
+      const boxH = (28 + lineCount * 16) * scale;
 
       const boxMarginRight = 85 * scale;
-      const boxMarginBottom = 95 * scale;
+      const boxMarginBottom = 90 * scale;
       const boxX = w - boxMarginRight - boxW;
       const boxY = h - boxMarginBottom - boxH;
 
@@ -1317,7 +1381,7 @@
       ctx.lineWidth = Math.max(0.8, 0.8 * scale);
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-      const boxFontSize = 8.0 * scale;
+      const boxFontSize = 8.5 * scale;
       ctx.font = `${boxFontSize}px ${serifFont}`;
       ctx.fillStyle = '#000000';
 
@@ -1367,7 +1431,51 @@
       }
     }
 
-    // --- ポインタ操作（タッチ＆ドラッグ黒塗り） ---
+    let editorMode = 'scroll'; // 'scroll' または 'redact'
+
+    function setEditorMode(mode) {
+      editorMode = mode;
+      const btnScroll = document.getElementById('btnModeScroll');
+      const btnRedact = document.getElementById('btnModeRedact');
+      const canvas = document.getElementById('previewCanvas');
+      const guideText = document.getElementById('guideText');
+      const guideBanner = document.getElementById('guideBanner');
+
+      if (mode === 'redact') {
+        if (btnScroll) btnScroll.classList.remove('active');
+        if (btnRedact) btnRedact.classList.add('active', 'active-redact');
+        if (canvas) {
+          canvas.style.touchAction = 'none';
+          canvas.style.cursor = 'crosshair';
+        }
+        if (guideText) {
+          guideText.innerHTML = '✏️ <b>【黒塗りモード中】</b> 隠したい箇所を指やマウスでドラッグして四角で囲んでください。完了したら「🖐️ スクロール」を押してください。';
+        }
+        if (guideBanner) {
+          guideBanner.style.background = '#ffedd5';
+          guideBanner.style.color = '#9a3412';
+          guideBanner.style.borderColor = '#fdba74';
+        }
+        showToast("黒塗りモードに切替えました（ドラッグで囲む）", "✏️");
+      } else {
+        if (btnScroll) btnScroll.classList.add('active');
+        if (btnRedact) btnRedact.classList.remove('active', 'active-redact');
+        if (canvas) {
+          canvas.style.touchAction = 'pan-y pan-x';
+          canvas.style.cursor = 'default';
+        }
+        if (guideText) {
+          guideText.innerHTML = '💡 <b>【スクロール閲覧中】</b> 画面を指でスワイプして上下左右に自由にスクロールできます。黒塗りしたい時は上の「✏️ 黒塗り」を押してください。';
+        }
+        if (guideBanner) {
+          guideBanner.style.background = '#fef3c7';
+          guideBanner.style.color = '#92400e';
+          guideBanner.style.borderColor = '#fde68a';
+        }
+      }
+    }
+
+    // --- ポインタ操作（タッチ＆ドラッグ黒塗り / スクロール両立） ---
     function setupPointerEvents() {
       const canvas = document.getElementById('previewCanvas');
       const box = document.getElementById('selectionBox');
@@ -1432,13 +1540,17 @@
         redactions[currentPageIndex].push({ x: pdfX, y: pdfY, w: pdfW, h: pdfH });
 
         renderCurrentPage();
-        showToast("黒塗りを追加しました", "✏️");
+        showToast("黒塗りを追加しました（「🖐️ スクロール」で閲覧に戻れます）", "✏️");
       };
 
       canvas.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        canvas.setPointerCapture(e.pointerId);
-        onStart(e.clientX, e.clientY);
+        // 黒塗りモード中、またはPCでマウス操作のときのみ黒塗りを開始
+        if (editorMode === 'redact' || e.pointerType === 'mouse') {
+          e.preventDefault();
+          canvas.setPointerCapture(e.pointerId);
+          onStart(e.clientX, e.clientY);
+        }
+        // スクロールモードのタッチ操作時はpreventDefaultを呼ばず、ブラウザのネイティブスクロールに任せる
       });
 
       canvas.addEventListener('pointermove', (e) => {
