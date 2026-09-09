@@ -1580,17 +1580,9 @@
         const d = String(today.getDate()).padStart(2, '0');
         const fileName = `ぴん球_完成版_${y}${m}${d}.pdf`;
 
-        // 自動ダウンロード
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => document.body.removeChild(link), 1000);
+        showToast("発行完了！🎉", "✅");
 
-        showToast("発行完了！保存されました 🎉", "✅");
-
-        // 完了モーダル表示（保存先案内＆直接開くボタン）
+        // 完了モーダルを表示（勝手にPDFを開かず、画面を維持して選択させる）
         openDownloadModal(blob, blobUrl, fileName);
       } catch (err) {
         console.error(err);
