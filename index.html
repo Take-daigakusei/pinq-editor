@@ -767,9 +767,13 @@
     <div class="modal-card">
       <div style="font-size: 2.2rem; margin-bottom: 8px;">🎉</div>
       <h3 style="margin: 0 0 10px; font-size: 1.15rem; color: #0f172a; font-weight: 700;">完成版PDFの発行が完了しました！</h3>
-      <p style="font-size: 0.88rem; color: #475569; line-height: 1.5; margin: 0 0 16px;">
+      <p style="font-size: 0.88rem; color: #475569; line-height: 1.5; margin: 0 0 10px;">
         <code id="downloadFileName" style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:6px; font-weight:700; display:inline-block;">ぴん球_完成版.pdf</code>
       </p>
+
+      <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:6px 10px; margin-bottom:14px; font-size:0.75rem; color:#065f46; font-weight:600; text-align:center;">
+        ✅ 発行完了に伴い、保持していた一時データは自動消去されました
+      </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <!-- スマホ用共有・保存ボタン（iPhone / Android の共有メニューを呼び出し） -->
@@ -928,13 +932,19 @@
       }
     }
 
-    async function confirmResetAllData() {
-      if (!confirm("保存されているすべてのファイル、コメント、黒塗りデータを消去して新規作成しますか？")) return;
+    async function clearSavedStateInIndexedDB() {
       try {
         const db = await openIndexedDB();
         const tx = db.transaction(STORE_NAME, 'readwrite');
         tx.objectStore(STORE_NAME).delete('current');
+        const ind = document.getElementById('saveStatusIndicator');
+        if (ind) ind.textContent = '🗑 発行完了により一時データ消去済み';
       } catch (e) {}
+    }
+
+    async function confirmResetAllData() {
+      if (!confirm("保存されているすべてのファイル、コメント、黒塗りデータを消去して新規作成しますか？")) return;
+      await clearSavedStateInIndexedDB();
       window.location.reload();
     }
 
@@ -2145,6 +2155,9 @@
 
         showToast("発行完了！🎉", "✅");
 
+        // ★ 発行完了に伴い、保持していた一時データは自動消去
+        clearSavedStateInIndexedDB();
+
         // 完了モーダルを表示（勝手にPDFを開かず、画面を維持して選択させる）
         openDownloadModal(blob, blobUrl, fileName);
       } catch (err) {
@@ -2168,6 +2181,24 @@
 
     function closeDownloadModal() {
       document.getElementById('downloadModal').style.display = 'none';
+      if (currentPdfBlobUrl) {
+        URL.revokeObjectURL(currentPdfBlobUrl);
+        currentPdfBlobUrl = null;
+      }
+      currentPdfBlob = null;
+
+      // 発行完了後は画面をまっさらな初期状態に戻す
+      clearCover();
+      clearAllBody();
+      clearBackCover();
+      redactions = {};
+      comments = [{ body: "", author: "" }, { body: "", author: "" }];
+      renderCommentsForm();
+      document.getElementById('afterwordIssueName').value = '';
+      document.getElementById('afterwordPublisher').value = '';
+      refreshPreview();
+      switchMobileTab('files');
+      showToast("新しい冊子を作成できます ✨", "📄");
     }
 
     async function handleShareOrSave() {
