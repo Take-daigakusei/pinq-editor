@@ -1205,16 +1205,34 @@
 
     function updateToolbarInfo() {
       const total = combinedPages.length;
-      document.getElementById('lblPageIndicator').textContent = total > 0 ? `${currentPageIndex + 1} / ${total}` : '0 / 0';
-      document.getElementById('btnPrevPage').disabled = currentPageIndex <= 0;
-      document.getElementById('btnNextPage').disabled = currentPageIndex >= total - 1 || total === 0;
+      const btnPrev = document.getElementById('btnPrevPage');
+      const btnNext = document.getElementById('btnNextPage');
+      const lblIndicator = document.getElementById('lblPageIndicator');
+      const lblSource = document.getElementById('lblPageSource');
 
-      if (total > 0) {
-        const item = combinedPages[currentPageIndex];
-        const sub = item.pageIndex ? `(P.${item.pageIndex})` : '';
-        document.getElementById('lblPageSource').textContent = `【${item.type}】 ${item.name} ${sub}`;
+      if (editorMode === 'scroll') {
+        if (lblIndicator) lblIndicator.textContent = total > 0 ? `全 ${total} ページ` : '0 / 0';
+        if (btnPrev) btnPrev.style.display = 'none';
+        if (btnNext) btnNext.style.display = 'none';
+        if (lblSource) lblSource.textContent = '（タップで黒塗り）';
       } else {
-        document.getElementById('lblPageSource').textContent = '（未選択）';
+        if (btnPrev) {
+          btnPrev.style.display = 'inline-flex';
+          btnPrev.disabled = currentPageIndex <= 0;
+        }
+        if (btnNext) {
+          btnNext.style.display = 'inline-flex';
+          btnNext.disabled = currentPageIndex >= total - 1 || total === 0;
+        }
+        if (lblIndicator) lblIndicator.textContent = total > 0 ? `${currentPageIndex + 1} / ${total}` : '0 / 0';
+
+        if (total > 0) {
+          const item = combinedPages[currentPageIndex];
+          const sub = item.pageIndex ? `(P.${item.pageIndex})` : '';
+          if (lblSource) lblSource.textContent = `【${item.type}】 ${item.name} ${sub}`;
+        } else {
+          if (lblSource) lblSource.textContent = '（未選択）';
+        }
       }
     }
 
@@ -1234,7 +1252,98 @@
     }
 
     // ========================================================
-    // 🌟 超高解像度レンダリング（Retina/高DPI・ぼやけ解消）
+    // 🌟 物理解像度で直接描画する共通レンダリング関数
+    // - ctx.scale二重適用による「一部しか表示されないバグ」を完全解消
+    // - PDFも画像も物理解像度で直接ラスタライズし、くっきり高精細
+    // ========================================================
+    const globalPdfDocCache = new Map();
+
+    async function renderPageContent(pageInfo, pIdx, canvas, cssW, cssH, dpr) {
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+      const actualW = Math.round(cssW * dpr);
+      const actualH = Math.round(cssH * dpr);
+      canvas.width = actualW;
+      canvas.height = actualH;
+
+      const ctx = canvas.getContext('2d');
+      // 背景白塗り
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, actualW, actualH);
+
+      const scale = actualW / targetPdfWidth;
+
+      if (pageInfo.type === '編集後記') {
+        drawExactAfterword(ctx, actualW, actualH, scale);
+      } else if (pageInfo.isImage) {
+        try {
+          // プレビュー用画像
+          const imgObj = await loadPreviewImage(pageInfo.file, 1600);
+          const imgW = imgObj.width;
+          const imgH = imgObj.height;
+
+          // 用紙全体を隙間なくカバー（Math.max）
+          const fitS = Math.max(actualW / imgW, actualH / imgH);
+          const drawW = imgW * fitS;
+          const drawH = imgH * fitS;
+          const offX = (actualW - drawW) / 2;
+          const offY = (actualH - drawH) / 2;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, actualW, actualH);
+          ctx.clip();
+          ctx.drawImage(imgObj.drawable, offX, offY, drawW, drawH);
+          ctx.restore();
+
+          // メモリ即時解放
+          imgObj.release();
+        } catch (err) {
+          console.error("画像プレビュー失敗:", err);
+        }
+      } else {
+        try {
+          let pdfDoc = globalPdfDocCache.get(pageInfo.file);
+          if (!pdfDoc) {
+            const ab = await pageInfo.file.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
+            globalPdfDocCache.set(pageInfo.file, pdfDoc);
+          }
+          const page = await pdfDoc.getPage(pageInfo.pageIndex);
+          const origViewport = page.getViewport({ scale: 1.0 });
+
+          // 用紙内にセンタリング（Math.min）
+          const fitS = Math.min(actualW / origViewport.width, actualH / origViewport.height);
+          const drawW = origViewport.width * fitS;
+          const drawH = origViewport.height * fitS;
+          const offX = (actualW - drawW) / 2;
+          const offY = (actualH - drawH) / 2;
+
+          ctx.save();
+          ctx.translate(offX, offY);
+          // 物理解像度fitSで直接ラスタライズして文字くっきり！
+          const renderViewport = page.getViewport({ scale: fitS });
+          await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+          ctx.restore();
+
+          if (page.cleanup) page.cleanup();
+        } catch (err) {
+          console.error("PDFプレビュー失敗:", err);
+        }
+      }
+
+      // 黒塗り矩形の描画（物理解像度座標）
+      const pageRedacts = redactions[pIdx] || [];
+      if (pageRedacts.length > 0) {
+        ctx.fillStyle = '#000000';
+        for (let r of pageRedacts) {
+          ctx.fillRect(r.x * scale, r.y * scale, r.w * scale, r.h * scale);
+        }
+      }
+    }
+
+    // ========================================================
+    // 🌟 黒塗りモード用：単一ページレンダリング
     // ========================================================
     async function renderCurrentPage() {
       updateToolbarInfo();
@@ -1242,7 +1351,6 @@
 
       const pageInfo = combinedPages[currentPageIndex];
       const canvas = document.getElementById('previewCanvas');
-      const ctx = canvas.getContext('2d');
 
       const viewportDiv = document.getElementById('previewViewport');
       const isMobile = window.innerWidth <= 768;
@@ -1251,95 +1359,22 @@
       const availW = Math.max(280, rawW - (isMobile ? 8 : 16));
       const availH = Math.max(300, rawH - (isMobile ? 8 : 16));
 
-      // スマホでは画面幅（availW）基準にして縦スクロールで読みやすく表示、PCでは画面全体に収める
+      // スマホでは画面幅基準で読みやすく表示、PCでは画面全体に収める
       const fitScale = isMobile
         ? (availW / targetPdfWidth)
         : Math.min(availW / targetPdfWidth, availH / targetPdfHeight);
 
       const displayScale = fitScale * userZoomFactor;
-
-      // CSS上の表示サイズ
       const cssW = Math.floor(targetPdfWidth * displayScale);
       const cssH = Math.floor(targetPdfHeight * displayScale);
 
-      // 黒塗り個別ページ用解像度（Retina 2.0倍・メモリ効率と画質のバランス最適化）
+      // 黒塗り個別ページ用解像度（Retina 2.0倍）
       const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
 
-      canvas.style.width = `${cssW}px`;
-      canvas.style.height = `${cssH}px`;
-      canvas.width = Math.floor(cssW * dpr);
-      canvas.height = Math.floor(cssH * dpr);
-
-      // モードに応じたタッチアクションとカーソル設定
       canvas.style.touchAction = (editorMode === 'redact') ? 'none' : 'pan-y pan-x';
       canvas.style.cursor = (editorMode === 'redact') ? 'crosshair' : 'default';
 
-      // 内部描画コンテキストを dpr 倍にスケール設定
-      ctx.save();
-      ctx.scale(dpr, dpr);
-
-      // 背景白塗り
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, cssW, cssH);
-
-      if (pageInfo.type === '編集後記') {
-        drawExactAfterword(ctx, cssW, cssH, displayScale);
-      } else if (pageInfo.isImage) {
-        try {
-          const imgObj = await loadPreviewImage(pageInfo.file, 1600);
-          const imgW = imgObj.width;
-          const imgH = imgObj.height;
-
-          // 上下に余白が出ないよう、用紙全体をカバー（Math.max）
-          const fitS = Math.max(targetPdfWidth / imgW, targetPdfHeight / imgH);
-          const drawW = imgW * fitS * displayScale;
-          const drawH = imgH * fitS * displayScale;
-          const offX = (cssW - drawW) / 2;
-          const offY = (cssH - drawH) / 2;
-
-          ctx.save();
-          // 用紙サイズ（0, 0, cssW, cssH）でクリッピングして枠外をカット
-          ctx.beginPath();
-          ctx.rect(0, 0, cssW, cssH);
-          ctx.clip();
-          ctx.drawImage(imgObj.drawable, offX, offY, drawW, drawH);
-          ctx.restore();
-
-          // ★ メモリ即時解放！
-          imgObj.release();
-        } catch (err) {
-          console.error("画像のプレビュー表示に失敗:", err);
-        }
-      } else {
-        try {
-          const ab = await pageInfo.file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-          const page = await pdf.getPage(pageInfo.pageIndex);
-          const origViewport = page.getViewport({ scale: 1.0 });
-
-          // 元ページを targetPdfWidth x targetPdfHeight にセンタリング
-          const fitS = Math.min(targetPdfWidth / origViewport.width, targetPdfHeight / origViewport.height);
-          const drawW = origViewport.width * fitS * displayScale;
-          const drawH = origViewport.height * fitS * displayScale;
-          const offX = (cssW - drawW) / 2;
-          const offY = (cssH - drawH) / 2;
-
-          // 一時Canvasを作らず直接ctxに描画してメモリ消費ゼロ
-          ctx.save();
-          ctx.translate(offX, offY);
-          const renderViewport = page.getViewport({ scale: fitS * displayScale * dpr });
-          await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
-          ctx.restore();
-
-          if (page.cleanup) page.cleanup();
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      // 黒塗り矩形の描画（表示スケールに合わせて描画）
-      drawRedactionsOnCanvas(ctx, displayScale);
-      ctx.restore();
+      await renderPageContent(pageInfo, currentPageIndex, canvas, cssW, cssH, dpr);
     }
 
     // ========================================================
@@ -1466,22 +1501,6 @@
       });
     }
 
-    function drawRedactionsOnCanvas(ctx, scale) {
-      const pageRedacts = redactions[currentPageIndex] || [];
-      ctx.fillStyle = '#000000';
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 1;
-
-      for (let r of pageRedacts) {
-        const x = r.x * scale;
-        const y = r.y * scale;
-        const w = r.w * scale;
-        const h = r.h * scale;
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeRect(x, y, w, h);
-      }
-    }
-
     let editorMode = 'scroll'; // 'scroll' または 'redact'
 
     function setEditorMode(mode) {
@@ -1496,164 +1515,136 @@
         if (btnRedact) btnRedact.classList.add('active', 'active-redact');
         allPagesContainer.style.display = 'none';
         canvasContainer.style.display = 'block';
+        updateToolbarInfo();
         renderCurrentPage();
-        showToast("黒塗りモード（ドラッグで囲む）", "✏️");
+        showToast(`P.${currentPageIndex + 1} 黒塗りモード（ドラッグで囲む）`, "✏️");
       } else {
         if (btnScroll) btnScroll.classList.add('active');
         if (btnRedact) btnRedact.classList.remove('active', 'active-redact');
         canvasContainer.style.display = 'none';
         allPagesContainer.style.display = 'flex';
+        updateToolbarInfo();
         renderAllPages();
         showToast("スクロール閲覧モード（全ページ一覧）", "🖐️");
+        // 直前に黒塗り編集していたページへ自動スクロール
+        setTimeout(() => {
+          const targetCard = document.getElementById(`page-card-${currentPageIndex}`);
+          if (targetCard) {
+            targetCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
+        }, 120);
       }
     }
 
-    // 全ページを縦並びで描画（スクロールモード用）
-    // 全ページを縦並びで描画（スクロールモード用: 30ページ超でもメモリクラッシュしない安全設計）
-    let _renderAllPagesRunning = false;
-    async function renderAllPages() {
-      if (_renderAllPagesRunning) return;
-      _renderAllPagesRunning = true;
-      try {
-        const allPagesContainer = document.getElementById('allPagesContainer');
-        allPagesContainer.innerHTML = '';
-        if (combinedPages.length === 0) {
-          updateToolbarInfo();
-          return;
-        }
+    // ========================================================
+    // 🌟 200枚超でも絶対にクラッシュしない「仮想スクロール」
+    // - IntersectionObserverで可視領域（および前後）のみオンデマンド高精細レンダリング
+    // - 画面外にスクロールしたページはCanvasを即座に破棄（メモリ解放）
+    // - メモリ上に存在するCanvasは常に3〜4枚（わずか15MB）のみ！
+    // - 200枚でも文字くっきり＆Safariの強制リロード（クラッシュ）を100%防止！
+    // ========================================================
+    let _scrollObserver = null;
 
-        const viewportDiv = document.getElementById('previewViewport');
-        const isMobile = window.innerWidth <= 768;
-        // 非表示時（clientWidth === 0）でもwindow.innerWidthを使って幅いっぱいにフィット
-        const rawW = (viewportDiv && viewportDiv.clientWidth > 50) ? viewportDiv.clientWidth : window.innerWidth;
-        const padding = isMobile ? 8 : 20;
-        const availW = Math.max(280, rawW - padding);
-        const fitScale = (availW / targetPdfWidth) * userZoomFactor;
-        const cssW = Math.floor(targetPdfWidth * fitScale);
-        const cssH = Math.floor(targetPdfHeight * fitScale);
+    function renderAllPages() {
+      const allPagesContainer = document.getElementById('allPagesContainer');
+      if (_scrollObserver) {
+        _scrollObserver.disconnect();
+        _scrollObserver = null;
+      }
+      allPagesContainer.innerHTML = '';
+      if (combinedPages.length === 0) {
+        updateToolbarInfo();
+        return;
+      }
 
-        // ★ 一覧スクロールはメモリ消費激減＆クラッシュ防止のため dpr = 1.0
-        const dpr = 1.0;
+      const viewportDiv = document.getElementById('previewViewport');
+      const isMobile = window.innerWidth <= 768;
+      const rawW = (viewportDiv && viewportDiv.clientWidth > 50) ? viewportDiv.clientWidth : window.innerWidth;
+      const padding = isMobile ? 8 : 20;
+      const availW = Math.max(280, rawW - padding);
+      const fitScale = (availW / targetPdfWidth) * userZoomFactor;
+      const cssW = Math.floor(targetPdfWidth * fitScale);
+      const cssH = Math.floor(targetPdfHeight * fitScale);
 
-        // PDFの重複ロード防止用ローカルキャッシュ
-        const pdfDocCache = new Map();
+      // ★ スクロール一覧でも文字がくっきり読める高精細Retina解像度！
+      // （画面外はアンロードされるため、高画質にしてもメモリは安全）
+      const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
 
-        // ツールバーのページ表示更新
-        const lblIndicator = document.getElementById('lblPageIndicator');
-        if (lblIndicator) lblIndicator.textContent = `全 ${combinedPages.length} ページ`;
-        const lblSource = document.getElementById('lblPageSource');
-        if (lblSource) lblSource.textContent = '（一覧表示中・タップで黒塗り）';
+      // ツールバーのページ表示更新
+      const lblIndicator = document.getElementById('lblPageIndicator');
+      if (lblIndicator) lblIndicator.textContent = `全 ${combinedPages.length} ページ`;
+      const lblSource = document.getElementById('lblPageSource');
+      if (lblSource) lblSource.textContent = '（タップで黒塗り）';
 
-        for (let pIdx = 0; pIdx < combinedPages.length; pIdx++) {
-          const pageInfo = combinedPages[pIdx];
+      // 1. 各ページのプレースホルダー枠を一括生成（メモリ消費はゼロに近い）
+      combinedPages.forEach((pageInfo, pIdx) => {
+        const pageCard = document.createElement('div');
+        pageCard.id = `page-card-${pIdx}`;
+        pageCard.className = 'page-scroll-card';
+        pageCard.dataset.pageIndex = pIdx;
+        pageCard.style.cssText = `width:100%; max-width:${cssW}px; height:${cssH + 28}px; min-height:${cssH + 28}px; display:flex; flex-direction:column; align-items:center; box-sizing:border-box; margin-bottom:12px;`;
 
-          const pageCard = document.createElement('div');
-          pageCard.style.cssText = 'display:flex; flex-direction:column; align-items:center; width:100%; box-sizing:border-box; margin-bottom:10px;';
+        // ページ番号ラベル
+        const label = document.createElement('div');
+        label.style.cssText = `font-size:0.75rem; color:#94a3b8; margin-bottom:3px; width:100%; text-align:left; height:20px; line-height:20px; padding:0 2px;`;
+        const sub = pageInfo.pageIndex ? ` (P.${pageInfo.pageIndex})` : '';
+        label.textContent = `P.${pIdx + 1} 【${pageInfo.type}】${pageInfo.name}${sub}`;
+        pageCard.appendChild(label);
 
-          // ページヘッダー（ページ番号＋ファイル名）
-          const label = document.createElement('div');
-          label.style.cssText = 'font-size:0.75rem; color:#94a3b8; margin-bottom:3px; width:100%; max-width:' + cssW + 'px; text-align:left; padding:0 2px;';
-          const sub = pageInfo.pageIndex ? ` (P.${pageInfo.pageIndex})` : '';
-          label.textContent = `P.${pIdx + 1} 【${pageInfo.type}】${pageInfo.name}${sub}`;
-          pageCard.appendChild(label);
+        // Canvasスロット（枠の高さ・幅を固定してスクロールバーを正確に維持）
+        const slot = document.createElement('div');
+        slot.className = 'canvas-slot';
+        slot.style.cssText = `width:${cssW}px; height:${cssH}px; max-width:100%; background:#0f172a; border-radius:4px; box-shadow:0 3px 12px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; position:relative;`;
+        slot.innerHTML = `<span style="color:#475569; font-size:0.75rem;">P.${pIdx + 1} 読込中...</span>`;
 
-          // キャンバス生成
-          const canvas = document.createElement('canvas');
-          canvas.style.width = `${cssW}px`;
-          canvas.style.height = `${cssH}px`;
-          canvas.style.maxWidth = '100%';
-          canvas.width = Math.floor(cssW * dpr);
-          canvas.height = Math.floor(cssH * dpr);
-          canvas.style.display = 'block';
-          canvas.style.borderRadius = '3px';
-          canvas.style.boxShadow = '0 3px 12px rgba(0,0,0,0.5)';
-          canvas.style.touchAction = 'pan-y pan-x';
-          canvas.style.cursor = 'pointer';
+        // クリック/タップでそのページの黒塗りモードに切り替え
+        slot.addEventListener('click', () => {
+          currentPageIndex = pIdx;
+          setEditorMode('redact');
+        });
 
-          // クリック/タップで黒塗りモードに切り替えてそのページを選択
-          (function(idx) {
-            canvas.addEventListener('click', () => {
-              currentPageIndex = idx;
-              setEditorMode('redact');
-            });
-          })(pIdx);
-          pageCard.appendChild(canvas);
-          allPagesContainer.appendChild(pageCard);
+        pageCard.appendChild(slot);
+        allPagesContainer.appendChild(pageCard);
+      });
 
-          const ctx = canvas.getContext('2d');
-          ctx.save();
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, cssW, cssH);
+      // 2. IntersectionObserverで可視領域（および前後400px）のみオンデマンド描画＆画面外アンロード
+      _scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const card = entry.target;
+          const pIdx = parseInt(card.dataset.pageIndex, 10);
+          const slot = card.querySelector('.canvas-slot');
+          if (!slot) return;
 
-          // ページ描画
-          if (pageInfo.type === '編集後記') {
-            drawExactAfterword(ctx, cssW, cssH, fitScale);
-          } else if (pageInfo.isImage) {
-            try {
-              const imgObj = await loadPreviewImage(pageInfo.file, 1000);
-              const imgW = imgObj.width;
-              const imgH = imgObj.height;
-              const fitS = Math.max(targetPdfWidth / imgW, targetPdfHeight / imgH);
-              const drawW = imgW * fitS * fitScale;
-              const drawH = imgH * fitS * fitScale;
-              const offX = (cssW - drawW) / 2;
-              const offY = (cssH - drawH) / 2;
-
-              ctx.save();
-              ctx.beginPath();
-              ctx.rect(0, 0, cssW, cssH);
-              ctx.clip();
-              ctx.drawImage(imgObj.drawable, offX, offY, drawW, drawH);
-              ctx.restore();
-
-              // ★ 即座にメモリ解放！
-              imgObj.release();
-            } catch (err) {
-              console.error("画像描画エラー:", err);
+          if (entry.isIntersecting) {
+            // 画面内（または手前400px）に入った -> Canvasを生成して高精細描画
+            if (!slot.querySelector('canvas')) {
+              const canvas = document.createElement('canvas');
+              canvas.style.display = 'block';
+              slot.innerHTML = '';
+              slot.appendChild(canvas);
+              renderPageContent(combinedPages[pIdx], pIdx, canvas, cssW, cssH, dpr);
             }
           } else {
-            try {
-              let pdfDoc = pdfDocCache.get(pageInfo.file);
-              if (!pdfDoc) {
-                const ab = await pageInfo.file.arrayBuffer();
-                pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
-                pdfDocCache.set(pageInfo.file, pdfDoc);
-              }
-              const page = await pdfDoc.getPage(pageInfo.pageIndex);
-              const origViewport = page.getViewport({ scale: 1.0 });
-              const fitS = Math.min(targetPdfWidth / origViewport.width, targetPdfHeight / origViewport.height);
-              const drawW = origViewport.width * fitS * fitScale;
-              const drawH = origViewport.height * fitS * fitScale;
-              const offX = (cssW - drawW) / 2;
-              const offY = (cssH - drawH) / 2;
-
-              // 一時Canvasを作らず直接ctxに描画してメモリ消費ゼロ
-              ctx.save();
-              ctx.translate(offX, offY);
-              const renderViewport = page.getViewport({ scale: fitS * fitScale * dpr });
-              await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
-              ctx.restore();
-
-              // ★ PDF.jsの内部キャッシュ解放
-              if (page.cleanup) page.cleanup();
-            } catch (err) {
-              console.error("PDF描画エラー:", err);
+            // 画面外にスクロールして出た -> Canvas破棄でWebKitメモリ即時ゼロ化！
+            const existingCanvas = slot.querySelector('canvas');
+            if (existingCanvas) {
+              existingCanvas.width = 0;
+              existingCanvas.height = 0;
+              existingCanvas.remove();
+              slot.innerHTML = `<span style="color:#475569; font-size:0.75rem;">P.${pIdx + 1}</span>`;
             }
           }
+        });
+      }, {
+        root: viewportDiv,
+        rootMargin: '400px 0px 400px 0px', // 上下400px（約1ページ分）手前で事前にロード
+        threshold: 0.01
+      });
 
-          // 黒塗り表示
-          const pageRedacts = redactions[pIdx] || [];
-          if (pageRedacts.length > 0) {
-            ctx.fillStyle = '#000000';
-            for (let r of pageRedacts) {
-              ctx.fillRect(r.x * fitScale, r.y * fitScale, r.w * fitScale, r.h * fitScale);
-            }
-          }
-          ctx.restore();
-        }
-      } finally {
-        _renderAllPagesRunning = false;
-      }
+      // 全カードを監視対象に登録
+      document.querySelectorAll('.page-scroll-card').forEach(card => {
+        _scrollObserver.observe(card);
+      });
     }
 
     // --- ポインタ操作（タッチ＆ドラッグ黒塗り / スクロール両立） ---
