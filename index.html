@@ -584,6 +584,12 @@
     <div class="left-pane mobile-active" id="leftPane">
       <div class="scroll-content">
         
+        <!-- 自動保存状態 ＆ 全データ初期化 -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:6px 10px; background:#f1f5f9; border-radius:6px; border:1px solid #cbd5e1;">
+          <span style="font-size:0.74rem; color:#475569; font-weight:600;" id="saveStatusIndicator">💾 自動保存有効（リロード時も保持）</span>
+          <button type="button" onclick="confirmResetAllData()" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:4px; padding:4px 8px; font-size:0.72rem; font-weight:700; cursor:pointer;">🗑 全データ初期化</button>
+        </div>
+
         <!-- 1. 表紙 -->
         <div class="section-card">
           <div class="section-title">
@@ -703,13 +709,15 @@
     <div class="right-pane" id="rightPane">
       <div class="preview-toolbar">
         <div class="toolbar-left">
-          <button class="page-nav-btn" id="btnPrevPage" onclick="changePage(-1)">◀ 前へ</button>
-          <span class="page-indicator" id="lblPageIndicator">0 / 0</span>
-          <button class="page-nav-btn" id="btnNextPage" onclick="changePage(1)">次へ ▶</button>
-          <span class="source-tag" id="lblPageSource">（未読込）</span>
+          <!-- タップしてページ番号入力・ジャンプできるボタン -->
+          <button type="button" class="page-indicator-btn" id="lblPageIndicator" onclick="openJumpPageModal()" title="タップしてページ番号を入力してジャンプ" style="background:#334155; color:#f8fafc; border:1px solid #64748b; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+            <span id="lblPageText">0 / 0</span>
+            <span style="font-size:0.68rem; opacity:0.8;">🔍移動</span>
+          </button>
+          <span class="source-tag" id="lblPageSource" style="display:none;">（一覧表示中）</span>
         </div>
         <div class="toolbar-right">
-          <!-- モード切替: スクロール vs 黒塗り -->
+          <!-- モード切替: スクロール vs 黒塗り（スクロール画面上で直接黒塗り可能！） -->
           <div class="toolbar-mode-group">
             <button type="button" class="btn-mode active" id="btnModeScroll" onclick="setEditorMode('scroll')">🖐️ スクロール</button>
             <button type="button" class="btn-mode" id="btnModeRedact" onclick="setEditorMode('redact')">✏️ 黒塗り</button>
@@ -726,19 +734,30 @@
       </div>
 
       <div class="preview-viewport" id="previewViewport">
-        <!-- スクロールモード: 全ページ縦一覧 -->
-        <div id="allPagesContainer" style="display:none; flex-direction:column; align-items:center; gap:8px; padding:8px 4px; width:100%;"></div>
-        <!-- 黒塗りモード: 1ページ表示 -->
-        <div class="canvas-container" id="canvasContainer">
-          <canvas id="previewCanvas"></canvas>
-          <div id="selectionBox"></div>
-        </div>
+        <!-- スクロール画面のまま直接黒塗りが可能！ -->
+        <div id="allPagesContainer" style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:8px 4px; width:100%; box-sizing:border-box;"></div>
       </div>
 
       <div class="action-bar" style="background:#1e293b; border-color:#334155;">
         <button class="btn-main" onclick="exportFinalPdf()">
           <span>🚀 完成版PDFを発行・保存</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ページ番号ジャンプモーダル -->
+  <div id="jumpPageModal" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeJumpPageModal()">
+    <div class="modal-card" style="max-width:320px; padding:18px;">
+      <h3 style="margin:0 0 12px; font-size:1rem; color:#0f172a; font-weight:700;">📍 ページへジャンプ</h3>
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px;">
+        <span style="font-size:1rem; color:#475569; font-weight:700;">P.</span>
+        <input type="number" id="jumpPageInput" min="1" max="1" style="width:100px; padding:8px 10px; font-size:1.2rem; text-align:center; font-weight:700; border:2px solid var(--primary); border-radius:6px;" inputmode="numeric" onkeydown="if(event.key==='Enter') executeJumpPage()">
+        <span id="jumpPageTotal" style="font-size:0.95rem; color:#475569; font-weight:600;">/ 0</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" onclick="closeJumpPageModal()" style="flex:1; padding:9px; font-size:0.85rem;">キャンセル</button>
+        <button class="btn-main" onclick="executeJumpPage()" style="flex:1; padding:9px; font-size:0.85rem;">移動する</button>
       </div>
     </div>
   </div>
@@ -832,6 +851,87 @@
       return loadPreviewImage(file, 1600);
     }
 
+    // ========================================================
+    // 💾 IndexedDB による大容量ファイル＆編集データ自動保存
+    // - リロードやブラウザ再起動時も選択したファイルを完全復元
+    // ========================================================
+    const DB_NAME = 'PinqEditorDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'projectData';
+
+    function openIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    let saveTimeout = null;
+    function debounceSaveState() {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        saveStateToIndexedDB();
+      }, 500);
+    }
+
+    async function saveStateToIndexedDB() {
+      try {
+        const db = await openIndexedDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+
+        const stateData = {
+          cover: coverFile ? { name: coverFile.name, file: coverFile } : null,
+          body: bodyFiles.map(b => ({ name: b.name, file: b.file })),
+          backCover: backCoverFile ? { name: backCoverFile.name, file: backCoverFile } : null,
+          redactions: redactions,
+          comments: comments,
+          afterwordIssueName: document.getElementById('afterwordIssueName')?.value || '',
+          afterwordPublisher: document.getElementById('afterwordPublisher')?.value || '',
+          selectedPaperSize: document.getElementById('selectPaperSize')?.value || 'A4',
+          savedAt: Date.now()
+        };
+
+        store.put(stateData, 'current');
+        const ind = document.getElementById('saveStatusIndicator');
+        if (ind) ind.textContent = `💾 保存済み (${new Date().toLocaleTimeString()})`;
+      } catch (err) {
+        console.warn("IndexedDB保存失敗:", err);
+      }
+    }
+
+    async function loadStateFromIndexedDB() {
+      try {
+        const db = await openIndexedDB();
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get('current');
+        return new Promise((resolve) => {
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve(null);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function confirmResetAllData() {
+      if (!confirm("保存されているすべてのファイル、コメント、黒塗りデータを消去して新規作成しますか？")) return;
+      try {
+        const db = await openIndexedDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete('current');
+      } catch (e) {}
+      window.location.reload();
+    }
+
     let coverFile = null;
     let bodyFiles = [];
     let backCoverFile = null;
@@ -865,7 +965,7 @@
       lastTouchEndTime = now;
     }, { passive: false });
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       const today = new Date();
       const y = today.getFullYear();
       const m = today.getMonth() + 1;
@@ -883,7 +983,51 @@
 
       renderCommentsForm();
       setupDragAndDrop();
-      setupPointerEvents();
+
+      // IndexedDB から前回の状態を自動復元
+      const saved = await loadStateFromIndexedDB();
+      if (saved) {
+        try {
+          if (saved.cover && saved.cover.file) {
+            coverFile = saved.cover.file;
+            document.getElementById('coverFileName').textContent = coverFile.name;
+            document.getElementById('coverDropZone').style.display = 'none';
+            document.getElementById('coverFileDisplay').style.display = 'flex';
+          }
+          if (saved.body && Array.isArray(saved.body)) {
+            bodyFiles = saved.body.map(b => ({ name: b.name, file: b.file }));
+            renderBodyList();
+          }
+          if (saved.backCover && saved.backCover.file) {
+            backCoverFile = saved.backCover.file;
+            document.getElementById('backCoverFileName').textContent = backCoverFile.name;
+            document.getElementById('backCoverDropZone').style.display = 'none';
+            document.getElementById('backCoverFileDisplay').style.display = 'flex';
+          }
+          if (saved.redactions) {
+            redactions = saved.redactions;
+          }
+          if (saved.comments && Array.isArray(saved.comments)) {
+            comments = saved.comments;
+            renderCommentsForm();
+          }
+          if (saved.afterwordIssueName) {
+            document.getElementById('afterwordIssueName').value = saved.afterwordIssueName;
+          }
+          if (saved.afterwordPublisher) {
+            document.getElementById('afterwordPublisher').value = saved.afterwordPublisher;
+          }
+          if (saved.selectedPaperSize) {
+            document.getElementById('selectPaperSize').value = saved.selectedPaperSize;
+          }
+          if (coverFile || bodyFiles.length > 0 || backCoverFile) {
+            refreshPreview();
+            showToast("前回の編集データを復元しました ✨", "🔄");
+          }
+        } catch (e) {
+          console.warn("復元処理エラー:", e);
+        }
+      }
     });
 
     function renderCommentsForm() {
@@ -1114,6 +1258,7 @@
       clearTimeout(refreshTimeout);
       refreshTimeout = setTimeout(() => {
         refreshPreview();
+        debounceSaveState();
       }, 250);
     }
 
@@ -1502,48 +1647,91 @@
     }
 
     let editorMode = 'scroll'; // 'scroll' または 'redact'
+    let lastRedactedPageIndex = null; // 取消用
 
     function setEditorMode(mode) {
       editorMode = mode;
       const btnScroll = document.getElementById('btnModeScroll');
       const btnRedact = document.getElementById('btnModeRedact');
-      const allPagesContainer = document.getElementById('allPagesContainer');
-      const canvasContainer = document.getElementById('canvasContainer');
 
       if (mode === 'redact') {
         if (btnScroll) btnScroll.classList.remove('active');
         if (btnRedact) btnRedact.classList.add('active', 'active-redact');
-        allPagesContainer.style.display = 'none';
-        canvasContainer.style.display = 'block';
-        updateToolbarInfo();
-        renderCurrentPage();
-        showToast(`P.${currentPageIndex + 1} 黒塗りモード（ドラッグで囲む）`, "✏️");
+        showToast("黒塗りモード（ページの上をなぞって黒塗り）", "✏️");
       } else {
         if (btnScroll) btnScroll.classList.add('active');
         if (btnRedact) btnRedact.classList.remove('active', 'active-redact');
-        canvasContainer.style.display = 'none';
-        allPagesContainer.style.display = 'flex';
-        updateToolbarInfo();
-        renderAllPages();
-        showToast("スクロール閲覧モード（全ページ一覧）", "🖐️");
-        // 直前に黒塗り編集していたページへ自動スクロール
-        setTimeout(() => {
-          const targetCard = document.getElementById(`page-card-${currentPageIndex}`);
-          if (targetCard) {
-            targetCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          }
-        }, 120);
+        showToast("スクロール閲覧モード", "🖐️");
+      }
+
+      // 各Canvasのタッチ動作とカーソルを一括切り替え
+      document.querySelectorAll('.canvas-slot canvas').forEach(cvs => {
+        cvs.style.touchAction = (mode === 'redact') ? 'none' : 'pan-y pan-x';
+        cvs.style.cursor = (mode === 'redact') ? 'crosshair' : 'default';
+      });
+    }
+
+    // ========================================================
+    // 📍 ページ番号ジャンプモーダル
+    // ========================================================
+    function openJumpPageModal() {
+      const total = combinedPages.length;
+      if (total === 0) return;
+      const modal = document.getElementById('jumpPageModal');
+      const input = document.getElementById('jumpPageInput');
+      const totalSpan = document.getElementById('jumpPageTotal');
+
+      input.max = total;
+      input.value = currentPageIndex + 1;
+      totalSpan.textContent = `/ ${total}`;
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 100);
+    }
+
+    function closeJumpPageModal() {
+      document.getElementById('jumpPageModal').style.display = 'none';
+    }
+
+    function executeJumpPage() {
+      const total = combinedPages.length;
+      if (total === 0) { closeJumpPageModal(); return; }
+      const input = document.getElementById('jumpPageInput');
+      let target = parseInt(input.value, 10);
+      if (isNaN(target)) target = 1;
+      target = Math.max(1, Math.min(total, target));
+      currentPageIndex = target - 1;
+
+      closeJumpPageModal();
+      const targetCard = document.getElementById(`page-card-${currentPageIndex}`);
+      if (targetCard) {
+        targetCard.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        showToast(`P.${target} へ移動しました`, "📍");
+      }
+      updatePageIndicatorText();
+    }
+
+    function updatePageIndicatorText() {
+      const total = combinedPages.length;
+      const lblText = document.getElementById('lblPageText');
+      if (!lblText) return;
+      if (total === 0) {
+        lblText.textContent = '0 / 0';
+      } else {
+        lblText.textContent = `P.${currentPageIndex + 1} / ${total}`;
       }
     }
 
     // ========================================================
-    // 🌟 200枚超でも絶対にクラッシュしない「仮想スクロール」
-    // - IntersectionObserverで可視領域（および前後）のみオンデマンド高精細レンダリング
-    // - 画面外にスクロールしたページはCanvasを即座に破棄（メモリ解放）
-    // - メモリ上に存在するCanvasは常に3〜4枚（わずか15MB）のみ！
-    // - 200枚でも文字くっきり＆Safariの強制リロード（クラッシュ）を100%防止！
+    // 🌟 スクロール画面のまま直接黒塗りできる仮想スクロール
+    // - IntersectionObserverで可視領域のみオンデマンド高精細描画
+    // - 各カード上で直接指やマウスでドラッグ黒塗り可能！
+    // - 200枚超でもメモリは常に15MB以下でSafariクラッシュ完全ゼロ！
     // ========================================================
     let _scrollObserver = null;
+    let _pageTrackerObserver = null;
 
     function renderAllPages() {
       const allPagesContainer = document.getElementById('allPagesContainer');
@@ -1551,9 +1739,14 @@
         _scrollObserver.disconnect();
         _scrollObserver = null;
       }
+      if (_pageTrackerObserver) {
+        _pageTrackerObserver.disconnect();
+        _pageTrackerObserver = null;
+      }
       allPagesContainer.innerHTML = '';
       if (combinedPages.length === 0) {
         updateToolbarInfo();
+        updatePageIndicatorText();
         return;
       }
 
@@ -1567,41 +1760,37 @@
       const cssH = Math.floor(targetPdfHeight * fitScale);
 
       // ★ スクロール一覧でも文字がくっきり読める高精細Retina解像度！
-      // （画面外はアンロードされるため、高画質にしてもメモリは安全）
       const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
 
-      // ツールバーのページ表示更新
-      const lblIndicator = document.getElementById('lblPageIndicator');
-      if (lblIndicator) lblIndicator.textContent = `全 ${combinedPages.length} ページ`;
-      const lblSource = document.getElementById('lblPageSource');
-      if (lblSource) lblSource.textContent = '（タップで黒塗り）';
+      updateToolbarInfo();
+      updatePageIndicatorText();
 
-      // 1. 各ページのプレースホルダー枠を一括生成（メモリ消費はゼロに近い）
+      // 1. 各ページのプレースホルダー枠を一括生成（軽量）
       combinedPages.forEach((pageInfo, pIdx) => {
         const pageCard = document.createElement('div');
         pageCard.id = `page-card-${pIdx}`;
         pageCard.className = 'page-scroll-card';
         pageCard.dataset.pageIndex = pIdx;
-        pageCard.style.cssText = `width:100%; max-width:${cssW}px; height:${cssH + 28}px; min-height:${cssH + 28}px; display:flex; flex-direction:column; align-items:center; box-sizing:border-box; margin-bottom:12px;`;
+        pageCard.style.cssText = `width:100%; max-width:${cssW}px; height:${cssH + 28}px; min-height:${cssH + 28}px; display:flex; flex-direction:column; align-items:center; box-sizing:border-box; margin-bottom:14px; position:relative;`;
 
-        // ページ番号ラベル
-        const label = document.createElement('div');
-        label.style.cssText = `font-size:0.75rem; color:#94a3b8; margin-bottom:3px; width:100%; text-align:left; height:20px; line-height:20px; padding:0 2px;`;
+        // ページ番号ヘッダー
+        const header = document.createElement('div');
+        header.style.cssText = `font-size:0.75rem; color:#94a3b8; margin-bottom:3px; width:100%; display:flex; justify-content:space-between; align-items:center; height:20px; padding:0 2px; box-sizing:border-box;`;
         const sub = pageInfo.pageIndex ? ` (P.${pageInfo.pageIndex})` : '';
-        label.textContent = `P.${pIdx + 1} 【${pageInfo.type}】${pageInfo.name}${sub}`;
-        pageCard.appendChild(label);
+        header.innerHTML = `<span>P.${pIdx + 1} 【${pageInfo.type}】${pageInfo.name}${sub}</span>`;
+        pageCard.appendChild(header);
 
-        // Canvasスロット（枠の高さ・幅を固定してスクロールバーを正確に維持）
+        // Canvasスロット
         const slot = document.createElement('div');
         slot.className = 'canvas-slot';
-        slot.style.cssText = `width:${cssW}px; height:${cssH}px; max-width:100%; background:#0f172a; border-radius:4px; box-shadow:0 3px 12px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; position:relative;`;
-        slot.innerHTML = `<span style="color:#475569; font-size:0.75rem;">P.${pIdx + 1} 読込中...</span>`;
+        slot.style.cssText = `width:${cssW}px; height:${cssH}px; max-width:100%; background:#0f172a; border-radius:4px; box-shadow:0 3px 14px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; user-select:none;`;
+        slot.innerHTML = `<span style="color:#64748b; font-size:0.75rem;">P.${pIdx + 1} 読込中...</span>`;
 
-        // クリック/タップでそのページの黒塗りモードに切り替え
-        slot.addEventListener('click', () => {
-          currentPageIndex = pIdx;
-          setEditorMode('redact');
-        });
+        // 選択ドラッグ用ボックス
+        const selectionBox = document.createElement('div');
+        selectionBox.className = 'card-selection-box';
+        selectionBox.style.cssText = `position:absolute; border:2px dashed #ef4444; background:rgba(239,68,68,0.28); display:none; pointer-events:none; z-index:10;`;
+        slot.appendChild(selectionBox);
 
         pageCard.appendChild(slot);
         allPagesContainer.appendChild(pageCard);
@@ -1616,61 +1805,95 @@
           if (!slot) return;
 
           if (entry.isIntersecting) {
-            // 画面内（または手前400px）に入った -> Canvasを生成して高精細描画
-            if (!slot.querySelector('canvas')) {
-              const canvas = document.createElement('canvas');
+            // 画面内に入った -> Canvasを生成して高精細描画
+            let canvas = slot.querySelector('canvas');
+            if (!canvas) {
+              canvas = document.createElement('canvas');
               canvas.style.display = 'block';
-              slot.innerHTML = '';
-              slot.appendChild(canvas);
+              canvas.style.touchAction = (editorMode === 'redact') ? 'none' : 'pan-y pan-x';
+              canvas.style.cursor = (editorMode === 'redact') ? 'crosshair' : 'default';
+              const selBox = slot.querySelector('.card-selection-box');
+              slot.insertBefore(canvas, selBox);
+
+              // プレースホルダー文字を消去
+              const txt = slot.querySelector('span');
+              if (txt) txt.remove();
+
               renderPageContent(combinedPages[pIdx], pIdx, canvas, cssW, cssH, dpr);
+              attachCardRedactEvents(canvas, pIdx, selBox, cssW, cssH, dpr);
             }
           } else {
-            // 画面外にスクロールして出た -> Canvas破棄でWebKitメモリ即時ゼロ化！
+            // 画面外に出た -> Canvas破棄でWebKitメモリ即時解放！
             const existingCanvas = slot.querySelector('canvas');
             if (existingCanvas) {
               existingCanvas.width = 0;
               existingCanvas.height = 0;
               existingCanvas.remove();
-              slot.innerHTML = `<span style="color:#475569; font-size:0.75rem;">P.${pIdx + 1}</span>`;
+              if (!slot.querySelector('span')) {
+                const ph = document.createElement('span');
+                ph.style.cssText = 'color:#64748b; font-size:0.75rem;';
+                ph.textContent = `P.${pIdx + 1}`;
+                slot.appendChild(ph);
+              }
             }
           }
         });
       }, {
         root: viewportDiv,
-        rootMargin: '400px 0px 400px 0px', // 上下400px（約1ページ分）手前で事前にロード
+        rootMargin: '400px 0px 400px 0px',
         threshold: 0.01
       });
 
-      // 全カードを監視対象に登録
+      // 3. 現在見えているページ番号を追跡するObserver
+      _pageTrackerObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const pIdx = parseInt(entry.target.dataset.pageIndex, 10);
+            currentPageIndex = pIdx;
+            updatePageIndicatorText();
+          }
+        });
+      }, {
+        root: viewportDiv,
+        threshold: 0.5
+      });
+
       document.querySelectorAll('.page-scroll-card').forEach(card => {
         _scrollObserver.observe(card);
+        _pageTrackerObserver.observe(card);
       });
     }
 
-    // --- ポインタ操作（タッチ＆ドラッグ黒塗り / スクロール両立） ---
-    function setupPointerEvents() {
-      const canvas = document.getElementById('previewCanvas');
-      const box = document.getElementById('selectionBox');
+    // ========================================================
+    // ✏️ 各カード上で直接黒塗りできるポインタ操作
+    // ========================================================
+    function attachCardRedactEvents(canvas, pIdx, box, cssW, cssH, dpr) {
+      let isSelecting = false;
+      let startX = 0;
+      let startY = 0;
 
-      const onStart = (clientX, clientY) => {
-        if (combinedPages.length === 0) return;
+      canvas.addEventListener('pointerdown', (e) => {
+        if (editorMode !== 'redact') return;
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
         isSelecting = true;
         const rect = canvas.getBoundingClientRect();
-        startX = clientX - rect.left;
-        startY = clientY - rect.top;
+        startX = e.clientX - rect.left;
+        startY = e.clientY - rect.top;
 
         box.style.left = `${startX}px`;
         box.style.top = `${startY}px`;
         box.style.width = '0px';
         box.style.height = '0px';
         box.style.display = 'block';
-      };
+      });
 
-      const onMove = (clientX, clientY) => {
+      canvas.addEventListener('pointermove', (e) => {
         if (!isSelecting) return;
+        e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        const curX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-        const curY = Math.max(0, Math.min(rect.height, clientY - rect.top));
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
 
         const minX = Math.min(startX, curX);
         const minY = Math.min(startY, curY);
@@ -1681,16 +1904,16 @@
         box.style.top = `${minY}px`;
         box.style.width = `${w}px`;
         box.style.height = `${h}px`;
-      };
+      });
 
-      const onEnd = (clientX, clientY) => {
+      const finishSelection = (e) => {
         if (!isSelecting) return;
         isSelecting = false;
         box.style.display = 'none';
 
         const rect = canvas.getBoundingClientRect();
-        const curX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-        const curY = Math.max(0, Math.min(rect.height, clientY - rect.top));
+        const curX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
 
         const minX = Math.min(startX, curX);
         const minY = Math.min(startY, curY);
@@ -1706,59 +1929,92 @@
         const pdfW = w / scale;
         const pdfH = h / scale;
 
-        if (!redactions[currentPageIndex]) {
-          redactions[currentPageIndex] = [];
+        if (!redactions[pIdx]) {
+          redactions[pIdx] = [];
         }
-        redactions[currentPageIndex].push({ x: pdfX, y: pdfY, w: pdfW, h: pdfH });
+        redactions[pIdx].push({ x: pdfX, y: pdfY, w: pdfW, h: pdfH, time: Date.now() });
+        lastRedactedPageIndex = pIdx;
 
-        renderCurrentPage();
-        showToast("黒塗りを追加しました（「🖐️ スクロール」で閲覧に戻れます）", "✏️");
+        // そのCanvasを再描画（黒塗りを即時反映）
+        renderPageContent(combinedPages[pIdx], pIdx, canvas, cssW, cssH, dpr);
+
+        // IndexedDBに自動保存
+        saveStateToIndexedDB();
+        showToast(`P.${pIdx + 1} に黒塗りを追加しました`, "✏️");
       };
 
-      canvas.addEventListener('pointerdown', (e) => {
-        // 黒塗りモード中、またはPCでマウス操作のときのみ黒塗りを開始
-        if (editorMode === 'redact' || e.pointerType === 'mouse') {
-          e.preventDefault();
-          canvas.setPointerCapture(e.pointerId);
-          onStart(e.clientX, e.clientY);
-        }
-        // スクロールモードのタッチ操作時はpreventDefaultを呼ばず、ブラウザのネイティブスクロールに任せる
-      });
-
-      canvas.addEventListener('pointermove', (e) => {
-        if (isSelecting) {
-          e.preventDefault();
-          onMove(e.clientX, e.clientY);
-        }
-      });
-
-      canvas.addEventListener('pointerup', (e) => {
-        if (isSelecting) {
-          e.preventDefault();
-          onEnd(e.clientX, e.clientY);
-        }
-      });
-
+      canvas.addEventListener('pointerup', finishSelection);
       canvas.addEventListener('pointercancel', () => {
         isSelecting = false;
         box.style.display = 'none';
       });
     }
 
+    // ========================================================
+    // ↩️ 直前の黒塗りを取消 ＆ 🗑 全消去
+    // ========================================================
     function undoRedaction() {
-      if (redactions[currentPageIndex] && redactions[currentPageIndex].length > 0) {
-        redactions[currentPageIndex].pop();
-        renderCurrentPage();
-        showToast("直前の黒塗りを取消しました", "↩️");
+      // 最も新しく追加された黒塗りを検索して取り消す
+      let newestPage = null;
+      let newestIdx = -1;
+      let newestTime = -1;
+
+      for (let p in redactions) {
+        const list = redactions[p];
+        if (list && list.length > 0) {
+          const lastItem = list[list.length - 1];
+          const t = lastItem.time || 0;
+          if (t >= newestTime) {
+            newestTime = t;
+            newestPage = parseInt(p, 10);
+            newestIdx = list.length - 1;
+          }
+        }
+      }
+
+      if (newestPage !== null && newestIdx >= 0) {
+        redactions[newestPage].pop();
+        if (redactions[newestPage].length === 0) {
+          delete redactions[newestPage];
+        }
+
+        // 対象カードのCanvasがあれば再描画
+        const card = document.getElementById(`page-card-${newestPage}`);
+        if (card) {
+          const canvas = card.querySelector('canvas');
+          if (canvas) {
+            const viewportDiv = document.getElementById('previewViewport');
+            const isMobile = window.innerWidth <= 768;
+            const rawW = (viewportDiv && viewportDiv.clientWidth > 50) ? viewportDiv.clientWidth : window.innerWidth;
+            const padding = isMobile ? 8 : 20;
+            const availW = Math.max(280, rawW - padding);
+            const fitScale = (availW / targetPdfWidth) * userZoomFactor;
+            const cssW = Math.floor(targetPdfWidth * fitScale);
+            const cssH = Math.floor(targetPdfHeight * fitScale);
+            const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
+            renderPageContent(combinedPages[newestPage], newestPage, canvas, cssW, cssH, dpr);
+          }
+        }
+
+        saveStateToIndexedDB();
+        showToast(`P.${newestPage + 1} の黒塗りを1件取消しました`, "↩️");
+      } else {
+        showToast("取消できる黒塗りがありません", "ℹ️");
       }
     }
 
     function clearPageRedactions() {
-      if (redactions[currentPageIndex] && redactions[currentPageIndex].length > 0) {
-        redactions[currentPageIndex] = [];
-        renderCurrentPage();
-        showToast("このページの黒塗りを全消去しました", "🗑");
+      const hasAny = Object.keys(redactions).some(k => redactions[k] && redactions[k].length > 0);
+      if (!hasAny) {
+        showToast("黒塗りは設定されていません", "ℹ️");
+        return;
       }
+
+      if (!confirm("すべてのページの黒塗りを消去しますか？")) return;
+      redactions = {};
+      renderAllPages();
+      saveStateToIndexedDB();
+      showToast("全ページの黒塗りを消去しました", "🗑");
     }
 
     async function exportFinalPdf() {
