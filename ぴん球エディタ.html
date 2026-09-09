@@ -688,21 +688,28 @@
     <div class="modal-card">
       <div style="font-size: 2.2rem; margin-bottom: 8px;">🎉</div>
       <h3 style="margin: 0 0 10px; font-size: 1.15rem; color: #0f172a; font-weight: 700;">完成版PDFの発行が完了しました！</h3>
-      <p style="font-size: 0.88rem; color: #475569; line-height: 1.6; margin: 0 0 16px;">
-        ご利用端末の <b>「ダウンロード」フォルダ</b> に<br>
-        <code id="downloadFileName" style="background:#e0e7ff; color:#3730a3; padding:3px 8px; border-radius:6px; font-weight:700; display:inline-block; margin-top:4px;">ぴん球_完成版.pdf</code><br>として自動保存されました！
+      <p style="font-size: 0.88rem; color: #475569; line-height: 1.5; margin: 0 0 16px;">
+        <code id="downloadFileName" style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:6px; font-weight:700; display:inline-block;">ぴん球_完成版.pdf</code>
       </p>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <a id="btnOpenPdfDirect" href="#" target="_blank" class="btn-main" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px; padding:12px; font-size:0.92rem;">
-          <span>📄 PDFを画面で開く（LINE等で共有）</span>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- スマホ用共有・保存ボタン（iPhone / Android の共有メニューを呼び出し） -->
+        <button id="btnShareNative" onclick="handleShareOrSave()" class="btn-main" style="width:100%; padding:14px; font-size:1rem; font-weight:700; background:#059669; border:none; border-radius:8px; display:flex; justify-content:center; align-items:center; gap:8px; cursor:pointer;">
+          <span>📤 LINEで送る / 端末に保存</span>
+        </button>
+
+        <!-- 直接開くボタン -->
+        <a id="btnOpenPdfDirect" href="#" target="_blank" class="btn btn-secondary" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px; padding:11px; font-size:0.88rem; color:#1e293b; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px;">
+          <span>📄 PDFを画面で開いて確認</span>
         </a>
-        <button class="btn btn-secondary" onclick="closeDownloadModal()" style="width:100%; padding:10px; font-size:0.85rem;">閉じる</button>
+
+        <button class="btn btn-secondary" onclick="closeDownloadModal()" style="width:100%; padding:8px; font-size:0.82rem; color:#64748b; background:transparent; border:none; cursor:pointer;">✕ 閉じる</button>
       </div>
-      <div style="margin-top: 14px; font-size: 0.78rem; color: #64748b; text-align: left; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.5;">
-        <b>📁 保存場所の確認方法:</b><br>
-        ・<b>iPhone:</b> 「ファイル」アプリ ➜ 「ダウンロード」<br>
-        ・<b>Android:</b> 「Files」等のファイル管理 ➜ 「ダウンロード」<br>
-        ・<b>PC:</b> パソコンの「ダウンロード」フォルダ
+
+      <div style="margin-top: 14px; font-size: 0.78rem; color: #64748b; text-align: left; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.6;">
+        <b>💡 iPhoneの方へ:</b><br>
+        「📤 LINEで送る / 端末に保存」を押すと共有メニューが開きます。<br>
+        そのまま <b>LINEアイコン</b> をタップしてサークルに送信するか、<b>「“ファイル”に保存」</b> を選ぶとダウンロード保存できます。
       </div>
     </div>
   </div>
@@ -782,6 +789,14 @@
       document.getElementById('afterwordDate').value = `${y}年${m}月${d}日発行`;
       document.getElementById('afterwordPublisher').value = "会長 〇〇";
       
+      // LINEアプリ内ブラウザ検知案内
+      if (/Line\//i.test(navigator.userAgent)) {
+        const lineBanner = document.createElement('div');
+        lineBanner.style.cssText = 'background:#fef3c7; color:#92400e; padding:10px 14px; font-size:0.82rem; line-height:1.4; border-bottom:1px solid #fde68a; display:flex; align-items:center; justify-content:space-between; gap:10px; z-index:99999; position:relative;';
+        lineBanner.innerHTML = '<span>💡 LINE内ブラウザをお使いです。PDFの保存・共有をスムーズにするため、右上の<b>「︙」</b>から<b>「デフォルトのブラウザ（Safari等）で開く」</b>をおすすめします。</span><button onclick="this.parentElement.remove()" style="background:none; border:none; font-size:1.1rem; cursor:pointer; color:#92400e; padding:4px;">✕</button>';
+        document.body.insertBefore(lineBanner, document.body.firstChild);
+      }
+
       renderCommentsForm();
       setupDragAndDrop();
       setupPointerEvents();
@@ -1576,14 +1591,21 @@
         showToast("発行完了！保存されました 🎉", "✅");
 
         // 完了モーダル表示（保存先案内＆直接開くボタン）
-        openDownloadModal(blobUrl, fileName);
+        openDownloadModal(blob, blobUrl, fileName);
       } catch (err) {
         console.error(err);
         alert("発行中にエラーが発生しました:\n" + err.message);
       }
     }
 
-    function openDownloadModal(url, fileName) {
+    let currentPdfBlob = null;
+    let currentPdfBlobUrl = null;
+    let currentPdfFileName = '';
+
+    function openDownloadModal(blob, url, fileName) {
+      currentPdfBlob = blob;
+      currentPdfBlobUrl = url;
+      currentPdfFileName = fileName;
       document.getElementById('downloadFileName').textContent = fileName;
       document.getElementById('btnOpenPdfDirect').href = url;
       document.getElementById('downloadModal').style.display = 'flex';
@@ -1591,6 +1613,34 @@
 
     function closeDownloadModal() {
       document.getElementById('downloadModal').style.display = 'none';
+    }
+
+    async function handleShareOrSave() {
+      if (!currentPdfBlob) return;
+      const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
+
+      // 1. スマホのネイティブ共有（iOS共有メニュー: LINE送信、ファイルに保存など）
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: currentPdfFileName,
+          });
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.warn('navigator.share failed, fallback', err);
+        }
+      }
+
+      // 2. フォールバック（直接開く / ダウンロード）
+      const link = document.createElement('a');
+      link.href = currentPdfBlobUrl;
+      link.download = currentPdfFileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => document.body.removeChild(link), 1000);
     }
 
     window.addEventListener('resize', () => {
