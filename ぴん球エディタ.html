@@ -1175,13 +1175,21 @@
           const img = await loadImageFromFile(pageInfo.file);
           const imgW = img.width || img.naturalWidth;
           const imgH = img.height || img.naturalHeight;
-          const fitS = Math.min(targetPdfWidth / imgW, targetPdfHeight / imgH);
+
+          // 上下に余白が出ないよう、用紙全体をカバー（Math.max）
+          const fitS = Math.max(targetPdfWidth / imgW, targetPdfHeight / imgH);
           const drawW = imgW * fitS * displayScale;
           const drawH = imgH * fitS * displayScale;
           const offX = (cssW - drawW) / 2;
           const offY = (cssH - drawH) / 2;
 
+          ctx.save();
+          // 用紙サイズ（0, 0, cssW, cssH）でクリッピングして枠外をカット
+          ctx.beginPath();
+          ctx.rect(0, 0, cssW, cssH);
+          ctx.clip();
           ctx.drawImage(img, offX, offY, drawW, drawH);
+          ctx.restore();
         } catch (err) {
           console.error("画像のプレビュー表示に失敗:", err);
         }
@@ -1222,27 +1230,27 @@
     // ========================================================
     // 🎨 見本画像完全一致：編集後記レンダリング
     // - A4（595.28pt）に対する黄金比率:
-    //   タイトル 15.5pt, 本文 8.2pt, 行送り 18.5pt, 奥付 7.5pt
-    //   縮小画面でも用紙との比率を100%維持（Math.maxの下限固定を排除）
+    //   タイトル 16.5pt, 本文 9.3pt, 行送り 20.5pt, 奥付 8.0pt
+    //   初期（10.5pt）より小さく、直前（8.2pt）より少し大きめで視認性と品格を両立
     // ========================================================
     function drawExactAfterword(ctx, w, h, scale) {
       const serifFont = '"Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Georgia", serif';
 
-      // 1. タイトル「編  集  後  記」（15.5pt、上品なサイズと文字間隔）
+      // 1. タイトル「編  集  後  記」（16.5pt、上品なサイズと文字間隔）
       ctx.fillStyle = '#000000';
       ctx.textAlign = 'center';
-      const titleSize = 15.5 * scale;
+      const titleSize = 16.5 * scale;
       ctx.font = `${titleSize}px ${serifFont}`;
-      const titleY = 145 * scale;
+      const titleY = 140 * scale;
       ctx.fillText("編  集  後  記", w / 2, titleY);
 
-      // 2. 本文コメントエリア（左右マージン約 92pt）
-      const marginX = 92 * scale;
+      // 2. 本文コメントエリア（左右マージン約 88pt）
+      const marginX = 88 * scale;
       const contentWidth = w - marginX * 2;
       let curY = 220 * scale;
 
-      const bodySize = 8.2 * scale;
-      const lineHeight = 18.5 * scale; // 行送り 18.5pt（フォントサイズの2.25倍、文字重なりゼロ）
+      const bodySize = 9.3 * scale;
+      const lineHeight = 20.5 * scale; // 行送り 20.5pt（文字重なりゼロの快適な行間）
       
       ctx.fillStyle = '#111111';
       ctx.font = `${bodySize}px ${serifFont}`;
@@ -1278,27 +1286,27 @@
 
         // 執筆者名（太字なし！通常ウェイト、右揃え）
         if (c.author) {
-          curY += 3 * scale;
+          curY += 4 * scale;
           ctx.save();
           ctx.textAlign = 'right';
           ctx.font = `${bodySize}px ${serifFont}`;
           ctx.fillStyle = '#000000';
           ctx.fillText(c.author, w - marginX, curY);
           ctx.restore();
-          curY += 48 * scale; // 次のコメントとの十分な余白
+          curY += 50 * scale; // 次のコメントとの十分な余白
         } else {
-          curY += 30 * scale;
+          curY += 32 * scale;
         }
       });
 
-      // 3. 右下の奥付ボックス（145pt × 自動高さ）
+      // 3. 右下の奥付ボックス（152pt × 自動高さ）
       const validEditors = comments.map(c => c.author.trim()).filter(a => a.length > 0);
       const editors = validEditors.length > 0 ? validEditors : ['　　　　'];
 
-      const boxW = 145 * scale;
-      const boxLineH = 14 * scale;
+      const boxW = 152 * scale;
+      const boxLineH = 15 * scale;
       const lineCount = 3 + 1 + editors.length;
-      const boxH = (24 + lineCount * 14) * scale;
+      const boxH = (26 + lineCount * 15) * scale;
 
       const boxMarginRight = 85 * scale;
       const boxMarginBottom = 95 * scale;
@@ -1309,7 +1317,7 @@
       ctx.lineWidth = Math.max(0.8, 0.8 * scale);
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-      const boxFontSize = 7.5 * scale;
+      const boxFontSize = 8.0 * scale;
       ctx.font = `${boxFontSize}px ${serifFont}`;
       ctx.fillStyle = '#000000';
 
@@ -1511,32 +1519,36 @@
             const imgW = img.width || img.naturalWidth;
             const imgH = img.height || img.naturalHeight;
 
-            // 印刷品質（300DPI相当）を保ちつつメモリを効率化
-            const maxDim = 2800;
-            const scaleDown = Math.min(1.0, maxDim / Math.max(imgW, imgH));
-            const offW = Math.round(imgW * scaleDown);
-            const offH = Math.round(imgH * scaleDown);
+            // 上下・左右の余白を完全解消するため、用紙縦横比に合わせた高解像度Canvasを用意
+            const hiScale = 3.0; // 約216DPIの高画質
+            const canvasW = Math.round(targetW * hiScale);
+            const canvasH = Math.round(targetH * hiScale);
 
             const offCanvas = document.createElement('canvas');
-            offCanvas.width = offW;
-            offCanvas.height = offH;
+            offCanvas.width = canvasW;
+            offCanvas.height = canvasH;
             const offCtx = offCanvas.getContext('2d');
-            offCtx.drawImage(img, 0, 0, offW, offH);
+            offCtx.fillStyle = '#FFFFFF';
+            offCtx.fillRect(0, 0, canvasW, canvasH);
 
-            const pngUrl = offCanvas.toDataURL('image/png');
-            const embeddedImg = await outDoc.embedPng(pngUrl);
+            // Math.max で用紙全体を隙間なくカバー（余白ゼロ）
+            const fitS = Math.max(canvasW / imgW, canvasH / imgH);
+            const drawW = imgW * fitS;
+            const drawH = imgH * fitS;
+            const offX = (canvasW - drawW) / 2;
+            const offY = (canvasH - drawH) / 2;
 
-            const s = Math.min(targetW / embeddedImg.width, targetH / embeddedImg.height);
-            const fitW = embeddedImg.width * s;
-            const fitH = embeddedImg.height * s;
-            const offX = (targetW - fitW) / 2;
-            const offY = (targetH - fitH) / 2;
+            offCtx.drawImage(img, offX, offY, drawW, drawH);
+
+            // 高品質JPEGで埋め込み（ファイルサイズ軽量化＆高速化）
+            const jpgUrl = offCanvas.toDataURL('image/jpeg', 0.95);
+            const embeddedImg = await outDoc.embedJpg(jpgUrl);
 
             newPage.drawImage(embeddedImg, {
-              x: offX,
-              y: offY,
-              width: fitW,
-              height: fitH,
+              x: 0,
+              y: 0,
+              width: targetW,
+              height: targetH,
             });
           } else {
             const ab = await pageInfo.file.arrayBuffer();
