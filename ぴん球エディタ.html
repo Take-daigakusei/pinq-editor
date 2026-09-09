@@ -495,12 +495,12 @@
         <!-- 1. 表紙 -->
         <div class="section-card">
           <div class="section-title">
-            <span>1. 表紙 PDF</span>
+            <span>1. 表紙（PDF または 写真・画像）</span>
           </div>
           <div class="drop-zone" id="coverDropZone" onclick="document.getElementById('coverInput').click()">
-            <p>タップして表紙PDFを選択</p>
+            <p>タップして表紙（PDF / 写真 / 画像）を選択</p>
             <span class="btn-select">＋ ファイルを選択</span>
-            <input type="file" id="coverInput" accept="application/pdf, .pdf" style="display:none" onchange="handleCoverSelect(this.files)">
+            <input type="file" id="coverInput" accept="application/pdf, .pdf, image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*" style="display:none" onchange="handleCoverSelect(this.files)">
           </div>
           <div id="coverFileDisplay" style="display:none;" class="file-item">
             <span class="file-name" id="coverFileName"></span>
@@ -511,13 +511,13 @@
         <!-- 2. 本文 -->
         <div class="section-card">
           <div class="section-title">
-            <span>2. 本文 PDF（順番通りに結合）</span>
+            <span>2. 本文（PDF または 写真・画像）</span>
             <button class="btn-icon" onclick="clearAllBody()" style="font-size:0.75rem;">全クリア</button>
           </div>
           <div class="drop-zone" id="bodyDropZone" onclick="document.getElementById('bodyInput').click()">
-            <p>タップして本文PDFを選択（複数可）</p>
-            <span class="btn-select">＋ 本文PDFを追加</span>
-            <input type="file" id="bodyInput" accept="application/pdf, .pdf" multiple style="display:none" onchange="handleBodySelect(this.files)">
+            <p>タップして本文を選択（PDF / 写真 / 画像・複数可）</p>
+            <span class="btn-select">＋ 本文を追加</span>
+            <input type="file" id="bodyInput" accept="application/pdf, .pdf, image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*" multiple style="display:none" onchange="handleBodySelect(this.files)">
           </div>
           <div class="body-list" id="bodyList"></div>
         </div>
@@ -576,12 +576,12 @@
         <!-- 4. 裏表紙 -->
         <div class="section-card">
           <div class="section-title">
-            <span>4. 裏表紙 PDF</span>
+            <span>4. 裏表紙（PDF または 写真・画像）</span>
           </div>
           <div class="drop-zone" id="backCoverDropZone" onclick="document.getElementById('backCoverInput').click()">
-            <p>タップして裏表紙PDFを選択</p>
+            <p>タップして裏表紙（PDF / 写真 / 画像）を選択</p>
             <span class="btn-select">＋ ファイルを選択</span>
-            <input type="file" id="backCoverInput" accept="application/pdf, .pdf" style="display:none" onchange="handleBackCoverSelect(this.files)">
+            <input type="file" id="backCoverInput" accept="application/pdf, .pdf, image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*" style="display:none" onchange="handleBackCoverSelect(this.files)">
           </div>
           <div id="backCoverFileDisplay" style="display:none;" class="file-item">
             <span class="file-name" id="backCoverFileName"></span>
@@ -661,6 +661,35 @@
     if (window.pdfjsLib) {
       // 単体HTMLファイルとしてLINEやメール等でスマホに送られた場合も確実に動くようCDNワーカーを設定
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    // 画像ファイル判定ヘルパー
+    function isImageFile(file) {
+      if (!file) return false;
+      if (file.type && file.type.startsWith('image/')) return true;
+      const ext = (file.name || '').split('.').pop().toLowerCase();
+      return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'jfif'].includes(ext);
+    }
+
+    // 画像（写真）の読み込み（スマホ撮影写真の向きEXIF自動補正対応）
+    async function loadImageFromFile(file) {
+      if (window.createImageBitmap) {
+        try {
+          const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+          return bitmap;
+        } catch (e) {
+          // fallback
+        }
+      }
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          resolve(img);
+        };
+        img.onerror = (err) => reject(err);
+        img.src = url;
+      });
     }
 
     let coverFile = null;
@@ -845,7 +874,7 @@
     function handleBodySelect(files) {
       if (!files || files.length === 0) return;
       for (let f of files) {
-        if (f.name.toLowerCase().endsWith('.pdf') || f.type.includes('pdf')) {
+        if (f.name.toLowerCase().endsWith('.pdf') || (f.type && f.type.includes('pdf')) || isImageFile(f)) {
           bodyFiles.push({ file: f, name: f.name });
         }
       }
@@ -935,26 +964,34 @@
       combinedPages = [];
 
       if (coverFile) {
-        try {
-          const ab = await coverFile.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-          for (let i = 1; i <= pdf.numPages; i++) {
-            combinedPages.push({ type: '表紙', file: coverFile, pageIndex: i, name: coverFile.name });
+        if (isImageFile(coverFile)) {
+          combinedPages.push({ type: '表紙', file: coverFile, isImage: true, name: coverFile.name });
+        } else {
+          try {
+            const ab = await coverFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            for (let i = 1; i <= pdf.numPages; i++) {
+              combinedPages.push({ type: '表紙', file: coverFile, pageIndex: i, name: coverFile.name });
+            }
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
         }
       }
 
       for (let item of bodyFiles) {
-        try {
-          const ab = await item.file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-          for (let i = 1; i <= pdf.numPages; i++) {
-            combinedPages.push({ type: '本文', file: item.file, pageIndex: i, name: item.name });
+        if (isImageFile(item.file)) {
+          combinedPages.push({ type: '本文', file: item.file, isImage: true, name: item.name });
+        } else {
+          try {
+            const ab = await item.file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            for (let i = 1; i <= pdf.numPages; i++) {
+              combinedPages.push({ type: '本文', file: item.file, pageIndex: i, name: item.name });
+            }
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
         }
       }
 
@@ -963,14 +1000,18 @@
       }
 
       if (backCoverFile) {
-        try {
-          const ab = await backCoverFile.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-          for (let i = 1; i <= pdf.numPages; i++) {
-            combinedPages.push({ type: '裏表紙', file: backCoverFile, pageIndex: i, name: backCoverFile.name });
+        if (isImageFile(backCoverFile)) {
+          combinedPages.push({ type: '裏表紙', file: backCoverFile, isImage: true, name: backCoverFile.name });
+        } else {
+          try {
+            const ab = await backCoverFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            for (let i = 1; i <= pdf.numPages; i++) {
+              combinedPages.push({ type: '裏表紙', file: backCoverFile, pageIndex: i, name: backCoverFile.name });
+            }
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
         }
       }
 
@@ -1059,6 +1100,21 @@
 
       if (pageInfo.type === '編集後記') {
         drawExactAfterword(ctx, cssW, cssH, displayScale);
+      } else if (pageInfo.isImage) {
+        try {
+          const img = await loadImageFromFile(pageInfo.file);
+          const imgW = img.width || img.naturalWidth;
+          const imgH = img.height || img.naturalHeight;
+          const fitS = Math.min(targetPdfWidth / imgW, targetPdfHeight / imgH);
+          const drawW = imgW * fitS * displayScale;
+          const drawH = imgH * fitS * displayScale;
+          const offX = (cssW - drawW) / 2;
+          const offY = (cssH - drawH) / 2;
+
+          ctx.drawImage(img, offX, offY, drawW, drawH);
+        } catch (err) {
+          console.error("画像のプレビュー表示に失敗:", err);
+        }
       } else {
         try {
           const ab = await pageInfo.file.arrayBuffer();
@@ -1379,6 +1435,38 @@
               y: 0,
               width: targetW,
               height: targetH,
+            });
+          } else if (pageInfo.isImage) {
+            const img = await loadImageFromFile(pageInfo.file);
+            const imgW = img.width || img.naturalWidth;
+            const imgH = img.height || img.naturalHeight;
+
+            // 印刷品質（300DPI相当）を保ちつつメモリを効率化
+            const maxDim = 2800;
+            const scaleDown = Math.min(1.0, maxDim / Math.max(imgW, imgH));
+            const offW = Math.round(imgW * scaleDown);
+            const offH = Math.round(imgH * scaleDown);
+
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = offW;
+            offCanvas.height = offH;
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.drawImage(img, 0, 0, offW, offH);
+
+            const pngUrl = offCanvas.toDataURL('image/png');
+            const embeddedImg = await outDoc.embedPng(pngUrl);
+
+            const s = Math.min(targetW / embeddedImg.width, targetH / embeddedImg.height);
+            const fitW = embeddedImg.width * s;
+            const fitH = embeddedImg.height * s;
+            const offX = (targetW - fitW) / 2;
+            const offY = (targetH - fitH) / 2;
+
+            newPage.drawImage(embeddedImg, {
+              x: offX,
+              y: offY,
+              width: fitW,
+              height: fitH,
             });
           } else {
             const ab = await pageInfo.file.arrayBuffer();
