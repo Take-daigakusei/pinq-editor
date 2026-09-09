@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>サークル誌「ぴん球」PDFエディタ - スマホ＆PC対応</title>
+  
+  <base target="_top">
+  <!-- ライブラリ読み込み（CDN優先、ローカルフォールバック） -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (typeof PDFLib === 'undefined') {
+      document.write('<script src="lib/pdf-lib.min.js"><\/script>');
+    }
+    if (typeof pdfjsLib === 'undefined') {
+      document.write('<script src="lib/pdf.min.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #059669;
+      --success-hover: #047857;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    header h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    header .badge {
+      background: #0284c7;
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 9999px;
+    }
+
+    .mobile-tab-bar {
+      display: none;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .mobile-tab-btn {
+      flex: 1;
+      padding: 12px 6px;
+      border: none;
+      background: none;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      text-align: center;
+    }
+    .mobile-tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .app-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 48px);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .left-pane {
+      width: 450px;
+      min-width: 360px;
+      background-color: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .scroll-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .section-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drop-zone {
+      border: 2px dashed #94a3b8;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone:active, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+    .drop-zone p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .drop-zone .btn-select {
+      display: inline-block;
+      margin-top: 6px;
+      background: #e2e8f0;
+      color: #1e293b;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f1f5f9;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      margin-top: 6px;
+    }
+    .file-item .file-name {
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 250px;
+    }
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #64748b;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .btn-icon:hover, .btn-icon:active {
+      background: #e2e8f0;
+      color: var(--danger);
+    }
+
+    .body-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .body-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+    .body-item .body-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 200px;
+    }
+    .body-item .body-index {
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 0.75rem;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+
+    .form-group {
+      margin-bottom: 8px;
+    }
+    .form-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 2px;
+      display: block;
+    }
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+
+    .comment-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+    .comment-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .action-bar {
+      padding: 12px 14px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-main {
+      background: var(--success);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-main:active {
+      background: var(--success-hover);
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #1e293b;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .right-pane {
+      flex: 1;
+      background: #334155;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .preview-toolbar {
+      background: #1e293b;
+      color: white;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #475569;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .page-nav-btn {
+      background: #334155;
+      color: white;
+      border: 1px solid #64748b;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 36px;
+    }
+    .page-indicator {
+      font-size: 0.88rem;
+      font-weight: 700;
+      min-width: 70px;
+      text-align: center;
+    }
+    .source-tag {
+      background: #0284c7;
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .btn-redact-action {
+      background: #475569;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      min-height: 36px;
+    }
+
+    .guide-banner {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      border-bottom: 1px solid #fde68a;
+      flex-shrink: 0;
+    }
+
+    .preview-viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      padding: 12px;
+      position: relative;
+      background: #1e293b;
+    }
+    .canvas-container {
+      position: relative;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      background: white;
+      line-height: 0;
+      user-select: none;
+      touch-action: none;
+      margin: auto;
+    }
+    #previewCanvas {
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+      /* 高DPI対応: 表示サイズはstyleで制御し内部バッファを高解像度化 */
+    }
+
+    #selectionBox {
+      position: absolute;
+      border: 2px dashed #ef4444;
+      background: rgba(239, 68, 68, 0.25);
+      display: none;
+      pointer-events: none;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      background: #0f172a;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 30px;
+      font-size: 0.88rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 9999;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      .mobile-tab-bar {
+        display: flex;
+      }
+      .app-container {
+        height: calc(100vh - 48px - 45px);
+      }
+      .left-pane {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        display: none;
+      }
+      .left-pane.mobile-active {
+        display: flex;
+      }
+      .right-pane {
+        width: 100%;
+        display: none;
+      }
+      .right-pane.mobile-active {
+        display: flex;
+      }
+      .source-tag {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>
+      <span>🏓</span>
+      <span>ぴん球 PDFエディタ</span>
+      <span class="badge">高精細表示対応</span>
+    </h1>
+  </header>
+
+  <div class="mobile-tab-bar">
+    <button class="mobile-tab-btn active" id="tabBtnFiles" onclick="switchMobileTab('files')">① ファイル設定</button>
+    <button class="mobile-tab-btn" id="tabBtnPreview" onclick="switchMobileTab('preview')">② プレビュー＆校正</button>
+  </div>
+
+  <div class="app-container">
+    <div class="left-pane mobile-active" id="leftPane">
+      <div class="scroll-content">
+        
+        <!-- 1. 表紙 -->
+        <div class="section-card">
+          <div class="section-title">
+            <span>1. 表紙 PDF</span>
+          </div>
+          <div class="drop-zone" id="coverDropZone" onclick="document.getElementById('coverInput').click()">
+            <p>タップして表紙PDFを選択</p>
+            <span class="btn-select">＋ ファイルを選択</span>
+            <input type="file" id="coverInput" accept="application/pdf, .pdf" style="display:none" onchange="handleCoverSelect(this.files)">
+          </div>
+          <div id="coverFileDisplay" style="display:none;" class="file-item">
+            <span class="file-name" id="coverFileName"></span>
+            <button class="btn-icon" onclick="clearCover()">✕ 削除</button>
+          </div>
+        </div>
+
+        <!-- 2. 本文 -->
+        <div class="section-card">
+          <div class="section-title">
+            <span>2. 本文 PDF（順番通りに結合）</span>
+            <button class="btn-icon" onclick="clearAllBody()" style="font-size:0.75rem;">全クリア</button>
+          </div>
+          <div class="drop-zone" id="bodyDropZone" onclick="document.getElementById('bodyInput').click()">
+            <p>タップして本文PDFを選択（複数可）</p>
+            <span class="btn-select">＋ 本文PDFを追加</span>
+            <input type="file" id="bodyInput" accept="application/pdf, .pdf" multiple style="display:none" onchange="handleBodySelect(this.files)">
+          </div>
+          <div class="body-list" id="bodyList"></div>
+        </div>
+
+        <!-- 3. 編集後記（見本画像準拠） -->
+        <div class="section-card">
+          <div class="section-title">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="chkAfterword" checked onchange="toggleAfterword(this.checked)">
+              <span>3. 編集後記（裏表紙の前に自動挿入）</span>
+            </label>
+          </div>
+          <div id="afterwordInputs">
+            
+            <div style="margin-bottom:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span class="form-label" style="margin-bottom:0; font-weight:700;">執筆コメント（実名が編集責任者に連動）</span>
+                <button type="button" class="btn-icon" onclick="addCommentBlock()" style="color:var(--primary); font-weight:700; font-size:0.78rem;">＋ コメント枠を追加</button>
+              </div>
+              <div id="commentsContainer"></div>
+            </div>
+
+            <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #cbd5e1;">
+              <span class="form-label" style="color:#1e293b; font-weight:700; margin-bottom:6px;">📄 右下の発行情報枠（奥付）</span>
+              
+              <div style="display:flex; gap:6px; margin-bottom:6px;">
+                <div style="flex:1;">
+                  <label class="form-label">サークル誌名</label>
+                  <input type="text" class="form-input" id="afterwordMagazineName" value="会内報（ぴん球）" oninput="debounceRefresh()">
+                </div>
+                <div style="flex:1;">
+                  <label class="form-label">号名（サブタイトル）</label>
+                  <input type="text" class="form-input" id="afterwordIssueName" value="〜早慶戦号〜" oninput="debounceRefresh()">
+                </div>
+              </div>
+
+              <div style="margin-bottom:6px;">
+                <label class="form-label">発行日</label>
+                <input type="text" class="form-input" id="afterwordDate" oninput="debounceRefresh()">
+              </div>
+
+              <div style="margin-bottom:6px;">
+                <label class="form-label">発行責任者（実名）</label>
+                <input type="text" class="form-input" id="afterwordPublisher" placeholder="例: 会長 〇〇" oninput="debounceRefresh()">
+              </div>
+
+              <div>
+                <label class="form-label">編集責任者（コメント欄の執筆者名が自動反映されます）</label>
+                <div id="editorsDisplayList" style="font-size:0.8rem; color:#475569; padding:4px 8px; background:#e2e8f0; border-radius:4px;"></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 4. 裏表紙 -->
+        <div class="section-card">
+          <div class="section-title">
+            <span>4. 裏表紙 PDF</span>
+          </div>
+          <div class="drop-zone" id="backCoverDropZone" onclick="document.getElementById('backCoverInput').click()">
+            <p>タップして裏表紙PDFを選択</p>
+            <span class="btn-select">＋ ファイルを選択</span>
+            <input type="file" id="backCoverInput" accept="application/pdf, .pdf" style="display:none" onchange="handleBackCoverSelect(this.files)">
+          </div>
+          <div id="backCoverFileDisplay" style="display:none;" class="file-item">
+            <span class="file-name" id="backCoverFileName"></span>
+            <button class="btn-icon" onclick="clearBackCover()">✕ 削除</button>
+          </div>
+        </div>
+
+        <!-- 5. 設定 -->
+        <div class="section-card">
+          <div class="section-title">
+            <span>5. 統一用紙サイズ</span>
+          </div>
+          <select class="form-select" id="selectPaperSize" onchange="debounceRefresh()">
+            <option value="A4" selected>A4縦 (210 × 297 mm) - 標準</option>
+            <option value="B5">B5縦 (182 × 257 mm)</option>
+            <option value="A5">A5縦 (148 × 210 mm)</option>
+            <option value="A4_LANDSCAPE">A4横 (297 × 210 mm)</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="action-bar">
+        <button class="btn-secondary" onclick="goToPreviewTab()">👁 プレビュー＆校正画面へ</button>
+        <button class="btn-main" onclick="exportFinalPdf()">
+          <span>🚀 完成版PDFを発行・保存</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 右ペイン: プレビュー＆校正（黒塗り） -->
+    <div class="right-pane" id="rightPane">
+      <div class="preview-toolbar">
+        <div class="toolbar-left">
+          <button class="page-nav-btn" id="btnPrevPage" onclick="changePage(-1)">◀ 前へ</button>
+          <span class="page-indicator" id="lblPageIndicator">0 / 0</span>
+          <button class="page-nav-btn" id="btnNextPage" onclick="changePage(1)">次へ ▶</button>
+          <span class="source-tag" id="lblPageSource">（未読込）</span>
+        </div>
+        <div class="toolbar-right">
+          <!-- 拡大率コントロール -->
+          <div style="display:flex; align-items:center; background:#334155; border-radius:4px; border:1px solid #64748b; margin-right:4px;">
+            <button class="page-nav-btn" style="border:none; padding:4px 8px;" onclick="zoomPreview(-0.25)">🔍-</button>
+            <span id="lblZoomLevel" style="font-size:0.75rem; min-width:42px; text-align:center;">100%</span>
+            <button class="page-nav-btn" style="border:none; padding:4px 8px;" onclick="zoomPreview(0.25)">🔍+</button>
+          </div>
+          <button class="btn-redact-action" onclick="undoRedaction()">⤺ 取消</button>
+          <button class="btn-redact-action" onclick="clearPageRedactions()">🗑 全消去</button>
+        </div>
+      </div>
+
+      <div class="guide-banner">
+        <span>💡 画面上を<b>指やマウスでドラッグして四角で囲む</b>と黒塗り（墨消し）できます。拡大ボタンで文字を大きくできます。</span>
+      </div>
+
+      <div class="preview-viewport" id="previewViewport">
+        <div class="canvas-container" id="canvasContainer">
+          <canvas id="previewCanvas"></canvas>
+          <div id="selectionBox"></div>
+        </div>
+      </div>
+
+      <div class="action-bar" style="background:#1e293b; border-color:#334155;">
+        <button class="btn-main" onclick="exportFinalPdf()">
+          <span>🚀 完成版PDFを発行・保存</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">
+    <span id="toastIcon">✅</span>
+    <span id="toastMessage"></span>
+  </div>
+
+  <script>
+    if (window.pdfjsLib) {
+      // 単体HTMLファイルとしてLINEやメール等でスマホに送られた場合も確実に動くようCDNワーカーを設定
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    let coverFile = null;
+    let bodyFiles = [];
+    let backCoverFile = null;
+    let combinedPages = [];
+    let currentPageIndex = 0;
+    let redactions = {};
+    let targetPdfWidth = 595.28;
+    let targetPdfHeight = 841.89;
+
+    // 拡大率（ズーム係数: 1.0 = フィットサイズ）
+    let userZoomFactor = 1.0;
+
+    let isSelecting = false;
+    let startX = 0;
+    let startY = 0;
+
+    let comments = [
+      {
+        body: "このサークル野球好き多くない？毎回野球の話についていけない総務の悲痛な叫びです。はまそうの文章も野球知ってればもっと面白いんだろうな...　ちなみに早慶戦には行けません。野球に興味がないからではなく日本酒のイベントに行くからです。早稲田が勝ったら教えてくださいね。アテにします。",
+        author: "北野 〇〇"
+      },
+      {
+        body: "ストライクとボールが何度聞いても理解できません。とりあえず打って走ればいいんでしたっけ、野球のルールがなんとなくしか分かりませんが、早慶戦観戦を今年も楽しみにしています。みんな熱中症には気をつけてね。",
+        author: "佐野 〇〇"
+      }
+    ];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = today.getMonth() + 1;
+      const d = today.getDate();
+      document.getElementById('afterwordDate').value = `${y}年${m}月${d}日発行`;
+      document.getElementById('afterwordPublisher').value = "会長 〇〇";
+      
+      renderCommentsForm();
+      setupDragAndDrop();
+      setupPointerEvents();
+    });
+
+    function renderCommentsForm() {
+      const container = document.getElementById('commentsContainer');
+      container.innerHTML = '';
+      comments.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'comment-card';
+        div.innerHTML = `
+          <div class="comment-card-header">
+            <span>コメント ${idx + 1}</span>
+            ${comments.length > 1 ? `<button type="button" class="btn-icon" onclick="removeCommentBlock(${idx})" style="padding:0; min-height:auto;">✕ 枠を削除</button>` : ''}
+          </div>
+          <div style="margin-bottom:6px;">
+            <textarea class="form-textarea" rows="3" placeholder="コメント本文を入力..." oninput="updateCommentBody(${idx}, this.value)">${c.body}</textarea>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:0.75rem; color:#475569; font-weight:600; white-space:nowrap;">執筆者（実名）:</span>
+            <input type="text" class="form-input" placeholder="例: 姓 名" value="${c.author}" oninput="updateCommentAuthor(${idx}, this.value)">
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      updateEditorsDisplay();
+    }
+
+    function updateEditorsDisplay() {
+      const listDiv = document.getElementById('editorsDisplayList');
+      const validAuthors = comments.map(c => c.author.trim()).filter(a => a.length > 0);
+      if (validAuthors.length === 0) {
+        listDiv.textContent = "（コメント執筆者名を入力するとここに連名表示されます）";
+      } else {
+        listDiv.innerHTML = validAuthors.map((a, i) => `<div>${i === 0 ? '編集責任者：' : '　　　　　　'}${a}</div>`).join('');
+      }
+    }
+
+    function addCommentBlock() {
+      comments.push({ body: '', author: '' });
+      renderCommentsForm();
+      debounceRefresh();
+    }
+
+    function removeCommentBlock(idx) {
+      if (comments.length > 1) {
+        comments.splice(idx, 1);
+        renderCommentsForm();
+        debounceRefresh();
+      }
+    }
+
+    function updateCommentBody(idx, val) {
+      comments[idx].body = val;
+      debounceRefresh();
+    }
+
+    function updateCommentAuthor(idx, val) {
+      comments[idx].author = val;
+      updateEditorsDisplay();
+      debounceRefresh();
+    }
+
+    function switchMobileTab(tab) {
+      const left = document.getElementById('leftPane');
+      const right = document.getElementById('rightPane');
+      const btnFiles = document.getElementById('tabBtnFiles');
+      const btnPrev = document.getElementById('tabBtnPreview');
+
+      if (tab === 'files') {
+        left.classList.add('mobile-active');
+        right.classList.remove('mobile-active');
+        btnFiles.classList.add('active');
+        btnPrev.classList.remove('active');
+      } else {
+        left.classList.remove('mobile-active');
+        right.classList.add('mobile-active');
+        btnFiles.classList.remove('active');
+        btnPrev.classList.add('active');
+        setTimeout(() => {
+          renderCurrentPage();
+        }, 50);
+      }
+    }
+
+    function goToPreviewTab() {
+      switchMobileTab('preview');
+    }
+
+    function zoomPreview(delta) {
+      userZoomFactor = Math.max(0.5, Math.min(3.0, userZoomFactor + delta));
+      document.getElementById('lblZoomLevel').textContent = `${Math.round(userZoomFactor * 100)}%`;
+      renderCurrentPage();
+    }
+
+    function showToast(msg, icon = '✅') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').textContent = icon;
+      document.getElementById('toastMessage').textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
+    }
+
+    function setupDragAndDrop() {
+      const setupZone = (zoneId, inputId, handler) => {
+        const zone = document.getElementById(zoneId);
+        zone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          zone.classList.add('dragover');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          zone.classList.remove('dragover');
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handler(e.dataTransfer.files);
+          }
+        });
+      };
+
+      setupZone('coverDropZone', 'coverInput', handleCoverSelect);
+      setupZone('bodyDropZone', 'bodyInput', handleBodySelect);
+      setupZone('backCoverDropZone', 'backCoverInput', handleBackCoverSelect);
+    }
+
+    function handleCoverSelect(files) {
+      if (!files || files.length === 0) return;
+      coverFile = files[0];
+      document.getElementById('coverFileName').textContent = coverFile.name;
+      document.getElementById('coverDropZone').style.display = 'none';
+      document.getElementById('coverFileDisplay').style.display = 'flex';
+      debounceRefresh();
+    }
+    function clearCover() {
+      coverFile = null;
+      document.getElementById('coverInput').value = '';
+      document.getElementById('coverDropZone').style.display = 'block';
+      document.getElementById('coverFileDisplay').style.display = 'none';
+      debounceRefresh();
+    }
+
+    function handleBodySelect(files) {
+      if (!files || files.length === 0) return;
+      for (let f of files) {
+        if (f.name.toLowerCase().endsWith('.pdf') || f.type.includes('pdf')) {
+          bodyFiles.push({ file: f, name: f.name });
+        }
+      }
+      renderBodyList();
+      debounceRefresh();
+    }
+    function renderBodyList() {
+      const list = document.getElementById('bodyList');
+      list.innerHTML = '';
+      bodyFiles.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'body-item';
+        div.innerHTML = `
+          <div class="body-name" title="${item.name}">
+            <span class="body-index">${index + 1}</span>
+            <span>${item.name}</span>
+          </div>
+          <div style="display:flex; gap:2px;">
+            <button class="btn-icon" onclick="moveBody(${index}, -1)" ${index === 0 ? 'disabled' : ''}>▲</button>
+            <button class="btn-icon" onclick="moveBody(${index}, 1)" ${index === bodyFiles.length - 1 ? 'disabled' : ''}>▼</button>
+            <button class="btn-icon" onclick="removeBody(${index})">✕</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+    function moveBody(index, dir) {
+      const newIdx = index + dir;
+      if (newIdx < 0 || newIdx >= bodyFiles.length) return;
+      const tmp = bodyFiles[index];
+      bodyFiles[index] = bodyFiles[newIdx];
+      bodyFiles[newIdx] = tmp;
+      renderBodyList();
+      debounceRefresh();
+    }
+    function removeBody(index) {
+      bodyFiles.splice(index, 1);
+      renderBodyList();
+      debounceRefresh();
+    }
+    function clearAllBody() {
+      bodyFiles = [];
+      document.getElementById('bodyInput').value = '';
+      renderBodyList();
+      debounceRefresh();
+    }
+
+    function toggleAfterword(checked) {
+      document.getElementById('afterwordInputs').style.display = checked ? 'block' : 'none';
+      debounceRefresh();
+    }
+
+    function handleBackCoverSelect(files) {
+      if (!files || files.length === 0) return;
+      backCoverFile = files[0];
+      document.getElementById('backCoverFileName').textContent = backCoverFile.name;
+      document.getElementById('backCoverDropZone').style.display = 'none';
+      document.getElementById('backCoverFileDisplay').style.display = 'flex';
+      debounceRefresh();
+    }
+    function clearBackCover() {
+      backCoverFile = null;
+      document.getElementById('backCoverInput').value = '';
+      document.getElementById('backCoverDropZone').style.display = 'block';
+      document.getElementById('backCoverFileDisplay').style.display = 'none';
+      debounceRefresh();
+    }
+
+    let refreshTimeout = null;
+    function debounceRefresh() {
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
+        refreshPreview();
+      }, 250);
+    }
+
+    function getSelectedPaperSize() {
+      const val = document.getElementById('selectPaperSize').value;
+      if (val === 'B5') return [515.91, 728.50];
+      if (val === 'A5') return [419.53, 595.28];
+      if (val === 'A4_LANDSCAPE') return [841.89, 595.28];
+      return [595.28, 841.89];
+    }
+
+    async function refreshPreview() {
+      [targetPdfWidth, targetPdfHeight] = getSelectedPaperSize();
+      combinedPages = [];
+
+      if (coverFile) {
+        try {
+          const ab = await coverFile.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+          for (let i = 1; i <= pdf.numPages; i++) {
+            combinedPages.push({ type: '表紙', file: coverFile, pageIndex: i, name: coverFile.name });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      for (let item of bodyFiles) {
+        try {
+          const ab = await item.file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+          for (let i = 1; i <= pdf.numPages; i++) {
+            combinedPages.push({ type: '本文', file: item.file, pageIndex: i, name: item.name });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (document.getElementById('chkAfterword').checked) {
+        combinedPages.push({ type: '編集後記', name: '指定様式' });
+      }
+
+      if (backCoverFile) {
+        try {
+          const ab = await backCoverFile.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+          for (let i = 1; i <= pdf.numPages; i++) {
+            combinedPages.push({ type: '裏表紙', file: backCoverFile, pageIndex: i, name: backCoverFile.name });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (combinedPages.length === 0) {
+        currentPageIndex = 0;
+        clearCanvas();
+        updateToolbarInfo();
+        return;
+      }
+
+      if (currentPageIndex >= combinedPages.length) {
+        currentPageIndex = Math.max(0, combinedPages.length - 1);
+      }
+
+      renderCurrentPage();
+    }
+
+    function updateToolbarInfo() {
+      const total = combinedPages.length;
+      document.getElementById('lblPageIndicator').textContent = total > 0 ? `${currentPageIndex + 1} / ${total}` : '0 / 0';
+      document.getElementById('btnPrevPage').disabled = currentPageIndex <= 0;
+      document.getElementById('btnNextPage').disabled = currentPageIndex >= total - 1 || total === 0;
+
+      if (total > 0) {
+        const item = combinedPages[currentPageIndex];
+        const sub = item.pageIndex ? `(P.${item.pageIndex})` : '';
+        document.getElementById('lblPageSource').textContent = `【${item.type}】 ${item.name} ${sub}`;
+      } else {
+        document.getElementById('lblPageSource').textContent = '（未選択）';
+      }
+    }
+
+    function clearCanvas() {
+      const canvas = document.getElementById('previewCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function changePage(delta) {
+      if (combinedPages.length === 0) return;
+      const nextIdx = currentPageIndex + delta;
+      if (nextIdx >= 0 && nextIdx < combinedPages.length) {
+        currentPageIndex = nextIdx;
+        renderCurrentPage();
+      }
+    }
+
+    // ========================================================
+    // 🌟 超高解像度レンダリング（Retina/高DPI・ぼやけ解消）
+    // ========================================================
+    async function renderCurrentPage() {
+      updateToolbarInfo();
+      if (combinedPages.length === 0) return;
+
+      const pageInfo = combinedPages[currentPageIndex];
+      const canvas = document.getElementById('previewCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const viewportDiv = document.getElementById('previewViewport');
+      const availW = Math.max(200, viewportDiv.clientWidth - 32);
+      const availH = Math.max(200, viewportDiv.clientHeight - 32);
+
+      // 表示基準スケール（ビューポートにフィット × ユーザー拡大率）
+      const fitScale = Math.min(availW / targetPdfWidth, availH / targetPdfHeight);
+      const displayScale = fitScale * userZoomFactor;
+
+      // CSS上の表示サイズ
+      const cssW = Math.floor(targetPdfWidth * displayScale);
+      const cssH = Math.floor(targetPdfHeight * displayScale);
+
+      // ★ 高DPI（Retina）内部バッファ解像度: 最低 2.0倍、スマホのRetinaなら 2.5〜3.0倍
+      const dpr = Math.max(2.0, window.devicePixelRatio || 2.0);
+
+      canvas.style.width = `${cssW}px`;
+      canvas.style.height = `${cssH}px`;
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+
+      // 内部描画コンテキストを dpr 倍にスケール設定
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      // 背景白塗り
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, cssW, cssH);
+
+      if (pageInfo.type === '編集後記') {
+        drawExactAfterword(ctx, cssW, cssH, displayScale);
+      } else {
+        try {
+          const ab = await pageInfo.file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+          const page = await pdf.getPage(pageInfo.pageIndex);
+          const origViewport = page.getViewport({ scale: 1.0 });
+
+          // 元ページを targetPdfWidth x targetPdfHeight にセンタリング
+          const fitS = Math.min(targetPdfWidth / origViewport.width, targetPdfHeight / origViewport.height);
+          const drawW = origViewport.width * fitS * displayScale;
+          const drawH = origViewport.height * fitS * displayScale;
+          const offX = (cssW - drawW) / 2;
+          const offY = (cssH - drawH) / 2;
+
+          // 高解像度一時キャンバス（dpr倍でくっきりラスタライズ）
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = Math.floor(drawW * dpr);
+          tempCanvas.height = Math.floor(drawH * dpr);
+          const tempCtx = tempCanvas.getContext('2d');
+
+          const renderViewport = page.getViewport({ scale: fitS * displayScale * dpr });
+          await page.render({ canvasContext: tempCtx, viewport: renderViewport }).promise;
+
+          ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, offX, offY, drawW, drawH);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // 黒塗り矩形の描画（表示スケールに合わせて描画）
+      drawRedactionsOnCanvas(ctx, displayScale);
+      ctx.restore();
+    }
+
+    // ========================================================
+    // 🎨 見本画像完全一致：編集後記レンダリング
+    // - A4（595.28pt）に対する黄金比率:
+    //   タイトル 15.5pt, 本文 8.2pt, 行送り 18.5pt, 奥付 7.5pt
+    //   縮小画面でも用紙との比率を100%維持（Math.maxの下限固定を排除）
+    // ========================================================
+    function drawExactAfterword(ctx, w, h, scale) {
+      const serifFont = '"Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Georgia", serif';
+
+      // 1. タイトル「編  集  後  記」（15.5pt、上品なサイズと文字間隔）
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      const titleSize = 15.5 * scale;
+      ctx.font = `${titleSize}px ${serifFont}`;
+      const titleY = 145 * scale;
+      ctx.fillText("編  集  後  記", w / 2, titleY);
+
+      // 2. 本文コメントエリア（左右マージン約 92pt）
+      const marginX = 92 * scale;
+      const contentWidth = w - marginX * 2;
+      let curY = 220 * scale;
+
+      const bodySize = 8.2 * scale;
+      const lineHeight = 18.5 * scale; // 行送り 18.5pt（フォントサイズの2.25倍、文字重なりゼロ）
+      
+      ctx.fillStyle = '#111111';
+      ctx.font = `${bodySize}px ${serifFont}`;
+      ctx.textAlign = 'left';
+
+      comments.forEach((c) => {
+        if (!c.body && !c.author) return;
+
+        const text = c.body || '';
+        let currentLine = '';
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          if (char === '\n') {
+            ctx.fillText(currentLine, marginX, curY);
+            curY += lineHeight;
+            currentLine = '';
+            continue;
+          }
+          const testLine = currentLine + char;
+          const testWidth = ctx.measureText(testLine).width;
+          if (testWidth > contentWidth) {
+            ctx.fillText(currentLine, marginX, curY);
+            curY += lineHeight;
+            currentLine = char;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) {
+          ctx.fillText(currentLine, marginX, curY);
+          curY += lineHeight;
+        }
+
+        // 執筆者名（太字なし！通常ウェイト、右揃え）
+        if (c.author) {
+          curY += 3 * scale;
+          ctx.save();
+          ctx.textAlign = 'right';
+          ctx.font = `${bodySize}px ${serifFont}`;
+          ctx.fillStyle = '#000000';
+          ctx.fillText(c.author, w - marginX, curY);
+          ctx.restore();
+          curY += 48 * scale; // 次のコメントとの十分な余白
+        } else {
+          curY += 30 * scale;
+        }
+      });
+
+      // 3. 右下の奥付ボックス（145pt × 自動高さ）
+      const validEditors = comments.map(c => c.author.trim()).filter(a => a.length > 0);
+      const editors = validEditors.length > 0 ? validEditors : ['　　　　'];
+
+      const boxW = 145 * scale;
+      const boxLineH = 14 * scale;
+      const lineCount = 3 + 1 + editors.length;
+      const boxH = (24 + lineCount * 14) * scale;
+
+      const boxMarginRight = 85 * scale;
+      const boxMarginBottom = 95 * scale;
+      const boxX = w - boxMarginRight - boxW;
+      const boxY = h - boxMarginBottom - boxH;
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.max(0.8, 0.8 * scale);
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+      const boxFontSize = 7.5 * scale;
+      ctx.font = `${boxFontSize}px ${serifFont}`;
+      ctx.fillStyle = '#000000';
+
+      const magName = document.getElementById('afterwordMagazineName').value || '会内報（ぴん球）';
+      const issueName = document.getElementById('afterwordIssueName').value || '〜早慶戦号〜';
+      const dateStr = document.getElementById('afterwordDate').value || '';
+      const pubName = document.getElementById('afterwordPublisher').value || '';
+
+      // 上部3行（中央揃え）
+      ctx.textAlign = 'center';
+      let boxCurY = boxY + 12 * scale;
+      ctx.fillText(magName, boxX + boxW / 2, boxCurY);
+      boxCurY += boxLineH;
+      if (issueName) {
+        ctx.fillText(issueName, boxX + boxW / 2, boxCurY);
+        boxCurY += boxLineH;
+      }
+      ctx.fillText(dateStr, boxX + boxW / 2, boxCurY);
+      boxCurY += boxLineH + 3 * scale;
+
+      // 下部（左揃え）：発行責任者 ＆ 編集責任者連名
+      ctx.textAlign = 'left';
+      const indentX = boxX + 12 * scale;
+      ctx.fillText(`発行責任者：${pubName}`, indentX, boxCurY);
+      boxCurY += boxLineH;
+
+      editors.forEach((ed, i) => {
+        const prefix = i === 0 ? '編集責任者：' : '　　　　　　';
+        ctx.fillText(`${prefix}${ed}`, indentX, boxCurY);
+        boxCurY += boxLineH;
+      });
+    }
+
+    function drawRedactionsOnCanvas(ctx, scale) {
+      const pageRedacts = redactions[currentPageIndex] || [];
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1;
+
+      for (let r of pageRedacts) {
+        const x = r.x * scale;
+        const y = r.y * scale;
+        const w = r.w * scale;
+        const h = r.h * scale;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeRect(x, y, w, h);
+      }
+    }
+
+    // --- ポインタ操作（タッチ＆ドラッグ黒塗り） ---
+    function setupPointerEvents() {
+      const canvas = document.getElementById('previewCanvas');
+      const box = document.getElementById('selectionBox');
+
+      const onStart = (clientX, clientY) => {
+        if (combinedPages.length === 0) return;
+        isSelecting = true;
+        const rect = canvas.getBoundingClientRect();
+        startX = clientX - rect.left;
+        startY = clientY - rect.top;
+
+        box.style.left = `${startX}px`;
+        box.style.top = `${startY}px`;
+        box.style.width = '0px';
+        box.style.height = '0px';
+        box.style.display = 'block';
+      };
+
+      const onMove = (clientX, clientY) => {
+        if (!isSelecting) return;
+        const rect = canvas.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+        const minX = Math.min(startX, curX);
+        const minY = Math.min(startY, curY);
+        const w = Math.abs(curX - startX);
+        const h = Math.abs(curY - startY);
+
+        box.style.left = `${minX}px`;
+        box.style.top = `${minY}px`;
+        box.style.width = `${w}px`;
+        box.style.height = `${h}px`;
+      };
+
+      const onEnd = (clientX, clientY) => {
+        if (!isSelecting) return;
+        isSelecting = false;
+        box.style.display = 'none';
+
+        const rect = canvas.getBoundingClientRect();
+        const curX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+        const curY = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+        const minX = Math.min(startX, curX);
+        const minY = Math.min(startY, curY);
+        const w = Math.abs(curX - startX);
+        const h = Math.abs(curY - startY);
+
+        if (w < 6 || h < 6) return;
+
+        // CSSピクセルからPDFポイント座標へ正確に変換
+        const scale = rect.width / targetPdfWidth;
+        const pdfX = minX / scale;
+        const pdfY = minY / scale;
+        const pdfW = w / scale;
+        const pdfH = h / scale;
+
+        if (!redactions[currentPageIndex]) {
+          redactions[currentPageIndex] = [];
+        }
+        redactions[currentPageIndex].push({ x: pdfX, y: pdfY, w: pdfW, h: pdfH });
+
+        renderCurrentPage();
+        showToast("黒塗りを追加しました", "✏️");
+      };
+
+      canvas.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        onStart(e.clientX, e.clientY);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (isSelecting) {
+          e.preventDefault();
+          onMove(e.clientX, e.clientY);
+        }
+      });
+
+      canvas.addEventListener('pointerup', (e) => {
+        if (isSelecting) {
+          e.preventDefault();
+          onEnd(e.clientX, e.clientY);
+        }
+      });
+
+      canvas.addEventListener('pointercancel', () => {
+        isSelecting = false;
+        box.style.display = 'none';
+      });
+    }
+
+    function undoRedaction() {
+      if (redactions[currentPageIndex] && redactions[currentPageIndex].length > 0) {
+        redactions[currentPageIndex].pop();
+        renderCurrentPage();
+        showToast("直前の黒塗りを取消しました", "↩️");
+      }
+    }
+
+    function clearPageRedactions() {
+      if (redactions[currentPageIndex] && redactions[currentPageIndex].length > 0) {
+        redactions[currentPageIndex] = [];
+        renderCurrentPage();
+        showToast("このページの黒塗りを全消去しました", "🗑");
+      }
+    }
+
+    async function exportFinalPdf() {
+      if (combinedPages.length === 0) {
+        alert("結合するPDFが選択されていません。先に「①ファイル設定」でPDFを選択してください。");
+        switchMobileTab('files');
+        return;
+      }
+
+      showToast("完成版PDFを作成中...", "⏳");
+
+      try {
+        const { PDFDocument, rgb } = PDFLib;
+        const outDoc = await PDFDocument.create();
+        const [targetW, targetH] = getSelectedPaperSize();
+
+        for (let pIdx = 0; pIdx < combinedPages.length; pIdx++) {
+          const pageInfo = combinedPages[pIdx];
+          const newPage = outDoc.addPage([targetW, targetH]);
+
+          if (pageInfo.type === '編集後記') {
+            const hiCanvas = document.createElement('canvas');
+            const hiDpi = 2.5; // 超高精細 2.5倍解像度
+            hiCanvas.width = targetW * hiDpi;
+            hiCanvas.height = targetH * hiDpi;
+            const hiCtx = hiCanvas.getContext('2d');
+            hiCtx.fillStyle = '#FFFFFF';
+            hiCtx.fillRect(0, 0, hiCanvas.width, hiCanvas.height);
+
+            drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi);
+
+            const pngUrl = hiCanvas.toDataURL('image/png');
+            const pngImg = await outDoc.embedPng(pngUrl);
+            newPage.drawImage(pngImg, {
+              x: 0,
+              y: 0,
+              width: targetW,
+              height: targetH,
+            });
+          } else {
+            const ab = await pageInfo.file.arrayBuffer();
+            const srcDoc = await PDFDocument.load(ab);
+            const [embedded] = await outDoc.embedPdf(srcDoc, [pageInfo.pageIndex - 1]);
+
+            const s = Math.min(targetW / embedded.width, targetH / embedded.height);
+            const fitW = embedded.width * s;
+            const fitH = embedded.height * s;
+            const offX = (targetW - fitW) / 2;
+            const offY = (targetH - fitH) / 2;
+
+            newPage.drawPage(embedded, {
+              x: offX,
+              y: offY,
+              width: fitW,
+              height: fitH,
+            });
+          }
+
+          const pageRedacts = redactions[pIdx] || [];
+          for (let r of pageRedacts) {
+            const pdfY = targetH - (r.y + r.h);
+            newPage.drawRectangle({
+              x: r.x,
+              y: pdfY,
+              width: r.w,
+              height: r.h,
+              color: rgb(0, 0, 0),
+            });
+          }
+        }
+
+        const pdfBytes = await outDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        link.download = `ぴん球_完成版_${y}${m}${d}.pdf`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast("発行完了！保存されました 🎉", "✅");
+      } catch (err) {
+        console.error(err);
+        alert("発行中にエラーが発生しました:\n" + err.message);
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      renderCurrentPage();
+    });
+  </script>
+</body>
+</html>

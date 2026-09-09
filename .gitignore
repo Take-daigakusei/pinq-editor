@@ -1,0 +1,9 @@
+input/
+output/
+samples/
+__pycache__/
+*.pdf
+.clasp.json
+appsscript.json
+コード.js
+*.bat
