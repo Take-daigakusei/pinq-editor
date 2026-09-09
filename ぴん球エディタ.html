@@ -776,28 +776,39 @@
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
-        <!-- スマホ用共有・保存ボタン（iPhone / Android の共有メニューを呼び出し） -->
-        <button id="btnShareNative" onclick="handleShareOrSave()" class="btn-main" style="width:100%; padding:14px; font-size:1rem; font-weight:700; background:#059669; border:none; border-radius:8px; display:flex; justify-content:center; align-items:center; gap:8px; cursor:pointer;">
-          <span>📤 LINEで送る / 端末に保存</span>
+        <!-- ステップ1: 保存ボタン -->
+        <button id="btnSavePdf" onclick="downloadPdfDirect()" class="btn-main" style="width:100%; padding:13px; font-size:0.98rem; font-weight:700; background:#2563eb; border:none; border-radius:8px; display:flex; justify-content:center; align-items:center; gap:8px; cursor:pointer; color:white; box-shadow:0 2px 4px rgba(37,99,235,0.2);">
+          <span>📥 ① PDFを端末に保存する</span>
         </button>
 
-        <!-- 直接開くボタン -->
-        <a id="btnOpenPdfDirect" href="#" target="_blank" class="btn btn-secondary" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:8px; padding:11px; font-size:0.88rem; color:#1e293b; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:8px;">
-          <span>📄 PDFを画面で開いて確認</span>
-        </a>
+        <!-- ステップ2: LINE起動ボタン -->
+        <button id="btnOpenLine" onclick="openLineApp()" class="btn-main" style="width:100%; padding:13px; font-size:0.98rem; font-weight:700; background:#06c755; border:none; border-radius:8px; display:flex; justify-content:center; align-items:center; gap:8px; cursor:pointer; color:white; box-shadow:0 2px 4px rgba(6,199,85,0.2);">
+          <span>💬 ② LINEアプリを開く</span>
+        </button>
 
-        <button class="btn btn-secondary" onclick="closeDownloadModal()" style="width:100%; padding:8px; font-size:0.82rem; color:#64748b; background:transparent; border:none; cursor:pointer;">✕ 閉じる</button>
+        <!-- サブアクション -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button onclick="handleShareOrSave()" class="btn btn-secondary" style="padding:9px 6px; font-size:0.8rem; color:#475569; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">
+            <span>📤 共有メニュー</span>
+          </button>
+          <a id="btnOpenPdfDirect" href="#" target="_blank" class="btn btn-secondary" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:4px; padding:9px 6px; font-size:0.8rem; color:#475569; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px;">
+            <span>📄 画面で開く</span>
+          </a>
+        </div>
+
+        <button class="btn btn-secondary" onclick="closeDownloadModal()" style="width:100%; padding:8px; font-size:0.82rem; color:#64748b; background:transparent; border:none; cursor:pointer;">✕ 閉じる（新規作成に戻る）</button>
       </div>
 
-      <div style="margin-top: 14px; font-size: 0.8rem; color: #475569; text-align: left; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; line-height: 1.6;">
-        <b style="color:#0f172a; font-size:0.84rem;">📱 共有メニューに LINE が見当たらない場合:</b><br>
-        <div style="margin-top:6px; padding-left:4px;">
-          <b>【方法① 共有メニュー内を探す】</b><br>
-          アプリアイコンの列を<b>右端までスワイプ</b>し、<b>「その他（…）」</b>をタップすると「LINE」があります。<br>
-          ※右上の「編集」からLINEを「よく使う項目」に追加すると、次回から最前列に表示されます！<br><br>
-          <b>【方法② 最も確実な送り方】</b><br>
-          1. 共有メニュー内の <b>「“ファイル”に保存」</b>（フォルダのマーク）をタップして端末に保存。<br>
-          2. LINEアプリを開き、送りたいトーク画面の <b>「＋」→「ファイル」</b> から完成版PDFを選ぶと、確実に送信できます！
+      <div style="margin-top: 14px; font-size: 0.82rem; color: #334155; text-align: left; background: #f0fdf4; padding: 12px 14px; border-radius: 8px; border: 1px solid #bbf7d0; line-height: 1.65;">
+        <b style="color:#166534; font-size:0.88rem;">📱 LINEへの送信手順（かんたん2ステップ）:</b>
+        <ol style="margin: 6px 0 8px 0; padding-left: 20px; font-size: 0.8rem;">
+          <li>上の<b>「① PDFを端末に保存する」</b>を押して保存（ダウンロード）。</li>
+          <li>上の<b>「② LINEアプリを開く」</b>を押して、送りたい人のトーク画面を開く。</li>
+          <li>トーク画面左下の <b>「＋」→「ファイル」</b> を選ぶと、<b>一番上に完成版PDFがある</b>のでタップして送信！</li>
+        </ol>
+        <div style="font-size:0.73rem; color:#64748b; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; line-height:1.45;">
+          ⚠️ <b>共有メニュー（その他）にLINEが出ない理由:</b><br>
+          AppleとLINEの制限により、Safari等のWeb上から直接PDFをLINEアプリへ受け渡す共有機能はLINE側が非対応となっているためです（故障や設定ミスではありません）。上記の手順がiPhoneで最も速く確実に送れる方法です。
         </div>
       </div>
     </div>
@@ -2201,11 +2212,28 @@
       showToast("新しい冊子を作成できます ✨", "📄");
     }
 
+    function downloadPdfDirect() {
+      if (!currentPdfBlobUrl) return;
+      const link = document.createElement('a');
+      link.href = currentPdfBlobUrl;
+      link.download = currentPdfFileName;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (link.parentNode) document.body.removeChild(link);
+      }, 1000);
+      showToast("保存を開始しました 📥", "📄");
+    }
+
+    function openLineApp() {
+      window.location.href = 'line://';
+    }
+
     async function handleShareOrSave() {
       if (!currentPdfBlob) return;
       const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
 
-      // 1. スマホのネイティブ共有（iOS共有メニュー: LINE送信、ファイルに保存など）
+      // 1. スマホのネイティブ共有（iOS共有メニュー: AirDrop、ファイルに保存など）
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
@@ -2218,14 +2246,8 @@
         }
       }
 
-      // 2. フォールバック（直接開く / ダウンロード）
-      const link = document.createElement('a');
-      link.href = currentPdfBlobUrl;
-      link.download = currentPdfFileName;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => document.body.removeChild(link), 1000);
+      // 2. フォールバック（直接ダウンロード）
+      downloadPdfDirect();
     }
 
     window.addEventListener('resize', () => {
