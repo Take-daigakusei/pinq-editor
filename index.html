@@ -673,8 +673,11 @@
               </div>
 
               <div style="margin-bottom:6px;">
-                <label class="form-label">発行日</label>
-                <input type="text" class="form-input" id="afterwordDate" readonly style="background:#e2e8f0; color:#475569; cursor:default;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                  <label class="form-label" style="margin-bottom:0;">発行日</label>
+                  <button type="button" class="btn-icon" onclick="resetDateToToday()" style="font-size:0.72rem; color:var(--primary); font-weight:700; padding:2px 4px; min-height:auto;">今日の日付に戻す</button>
+                </div>
+                <input type="text" class="form-input" id="afterwordDate" placeholder="例: 2026年9月16日発行" oninput="debounceRefresh()">
               </div>
 
               <div style="margin-bottom:6px;">
@@ -944,6 +947,7 @@
           redactions: redactions,
           comments: comments,
           afterwordIssueName: document.getElementById('afterwordIssueName')?.value || '',
+          afterwordDate: document.getElementById('afterwordDate')?.value || '',
           afterwordPublisher: document.getElementById('afterwordPublisher')?.value || '',
           selectedPaperSize: document.getElementById('selectPaperSize')?.value || 'A4',
           savedAt: Date.now()
@@ -1069,6 +1073,9 @@
           }
           if (saved.afterwordIssueName) {
             document.getElementById('afterwordIssueName').value = saved.afterwordIssueName;
+          }
+          if (saved.afterwordDate) {
+            document.getElementById('afterwordDate').value = saved.afterwordDate;
           }
           if (saved.afterwordPublisher) {
             document.getElementById('afterwordPublisher').value = saved.afterwordPublisher;
@@ -1356,6 +1363,16 @@
     function toggleAfterword(checked) {
       document.getElementById('afterwordInputs').style.display = checked ? 'block' : 'none';
       debounceRefresh();
+    }
+
+    function resetDateToToday() {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = today.getMonth() + 1;
+      const d = today.getDate();
+      document.getElementById('afterwordDate').value = `${y}年${m}月${d}日発行`;
+      debounceRefresh();
+      showToast("発行日を本日の日付に設定しました", "📅");
     }
 
     function handleBackCoverSelect(files) {
@@ -2322,6 +2339,11 @@
       renderCommentsForm();
       document.getElementById('afterwordIssueName').value = '';
       document.getElementById('afterwordPublisher').value = '';
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = today.getMonth() + 1;
+      const d = today.getDate();
+      document.getElementById('afterwordDate').value = `${y}年${m}月${d}日発行`;
       refreshPreview();
       switchMobileTab('files');
       showToast("新しい冊子を作成できます ✨", "📄");
