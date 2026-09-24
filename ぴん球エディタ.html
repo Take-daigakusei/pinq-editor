@@ -794,6 +794,23 @@
     </div>
   </div>
 
+  <!-- 発行中プログレスモーダル（300枚超対応） -->
+  <div id="exportProgressModal" class="modal-overlay" style="display:none; z-index:99999;">
+    <div class="modal-card" style="max-width:380px;">
+      <div style="font-size: 2.2rem; margin-bottom: 8px;">⏳</div>
+      <h3 style="margin: 0 0 8px; font-size: 1.15rem; color: #0f172a; font-weight: 700;">完成版PDFを発行中...</h3>
+      <p id="exportProgressText" style="font-size: 0.88rem; color: #475569; margin: 0 0 12px; font-weight: 600;">準備中...</p>
+      
+      <div style="background:#e2e8f0; border-radius:10px; height:12px; overflow:hidden; width:100%; margin-bottom:12px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+        <div id="exportProgressBar" style="background:#2563eb; width:0%; height:100%; transition:width 0.2s ease;"></div>
+      </div>
+      
+      <div style="font-size:0.75rem; color:#64748b; line-height:1.45; background:#f8fafc; padding:8px 10px; border-radius:6px; border:1px solid #e2e8f0;">
+        ⚡ 300枚近い大容量でもメモリを最適化しながら安全に結合しています。画面を閉じずにお待ちください。
+      </div>
+    </div>
+  </div>
+
   <!-- 発行完了モーダル -->
   <div id="downloadModal" class="modal-overlay" style="display:none;" onclick="if(event.target === this) closeDownloadModal()">
     <div class="modal-card">
@@ -1302,6 +1319,7 @@
       debounceRefresh();
     }
     function clearCover() {
+      clearPdfDocCache();
       coverFile = null;
       document.getElementById('coverInput').value = '';
       document.getElementById('coverDropZone').style.display = 'block';
@@ -1349,11 +1367,13 @@
       debounceRefresh();
     }
     function removeBody(index) {
+      clearPdfDocCache();
       bodyFiles.splice(index, 1);
       renderBodyList();
       debounceRefresh();
     }
     function clearAllBody() {
+      clearPdfDocCache();
       bodyFiles = [];
       document.getElementById('bodyInput').value = '';
       renderBodyList();
@@ -1384,6 +1404,7 @@
       debounceRefresh();
     }
     function clearBackCover() {
+      clearPdfDocCache();
       backCoverFile = null;
       document.getElementById('backCoverInput').value = '';
       document.getElementById('backCoverDropZone').style.display = 'block';
@@ -1417,8 +1438,7 @@
           combinedPages.push({ type: '表紙', file: coverFile, isImage: true, name: coverFile.name });
         } else {
           try {
-            const ab = await coverFile.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            const pdf = await getOrLoadPdfDoc(coverFile);
             for (let i = 1; i <= pdf.numPages; i++) {
               combinedPages.push({ type: '表紙', file: coverFile, pageIndex: i, name: coverFile.name });
             }
@@ -1433,8 +1453,7 @@
           combinedPages.push({ type: '本文', file: item.file, isImage: true, name: item.name });
         } else {
           try {
-            const ab = await item.file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            const pdf = await getOrLoadPdfDoc(item.file);
             for (let i = 1; i <= pdf.numPages; i++) {
               combinedPages.push({ type: '本文', file: item.file, pageIndex: i, name: item.name });
             }
@@ -1453,8 +1472,7 @@
           combinedPages.push({ type: '裏表紙', file: backCoverFile, isImage: true, name: backCoverFile.name });
         } else {
           try {
-            const ab = await backCoverFile.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            const pdf = await getOrLoadPdfDoc(backCoverFile);
             for (let i = 1; i <= pdf.numPages; i++) {
               combinedPages.push({ type: '裏表紙', file: backCoverFile, pageIndex: i, name: backCoverFile.name });
             }
@@ -1536,10 +1554,38 @@
 
     // ========================================================
     // 🌟 物理解像度で直接描画する共通レンダリング関数
-    // - ctx.scale二重適用による「一部しか表示されないバグ」を完全解消
     // - PDFも画像も物理解像度で直接ラスタライズし、くっきり高精細
+    // - 300枚超対応: LRUキャッシュで開くPDFドキュメントを常時5件以下に抑制
     // ========================================================
     const globalPdfDocCache = new Map();
+
+    async function getOrLoadPdfDoc(file) {
+      if (globalPdfDocCache.has(file)) {
+        return globalPdfDocCache.get(file);
+      }
+      // メモリ節約: キャッシュ上限（5件）を超えたら最古のPDFドキュメントを破棄
+      if (globalPdfDocCache.size >= 5) {
+        const oldestKey = globalPdfDocCache.keys().next().value;
+        const oldDoc = globalPdfDocCache.get(oldestKey);
+        if (oldDoc && oldDoc.destroy) {
+          try { oldDoc.destroy(); } catch (e) {}
+        }
+        globalPdfDocCache.delete(oldestKey);
+      }
+      const ab = await file.arrayBuffer();
+      const pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
+      globalPdfDocCache.set(file, pdfDoc);
+      return pdfDoc;
+    }
+
+    function clearPdfDocCache() {
+      for (let [k, doc] of globalPdfDocCache.entries()) {
+        if (doc && doc.destroy) {
+          try { doc.destroy(); } catch (e) {}
+        }
+      }
+      globalPdfDocCache.clear();
+    }
 
     async function renderPageContent(pageInfo, pIdx, canvas, cssW, cssH, dpr) {
       canvas.style.width = `${cssW}px`;
@@ -1586,12 +1632,7 @@
         }
       } else {
         try {
-          let pdfDoc = globalPdfDocCache.get(pageInfo.file);
-          if (!pdfDoc) {
-            const ab = await pageInfo.file.arrayBuffer();
-            pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
-            globalPdfDocCache.set(pageInfo.file, pdfDoc);
-          }
+          const pdfDoc = await getOrLoadPdfDoc(pageInfo.file);
           const page = await pdfDoc.getPage(pageInfo.pageIndex);
           const origViewport = page.getViewport({ scale: 1.0 });
 
@@ -2097,8 +2138,8 @@
         // そのCanvasを再描画（黒塗りを即時反映）
         renderPageContent(combinedPages[pIdx], pIdx, canvas, cssW, cssH, dpr);
 
-        // IndexedDBに自動保存
-        saveStateToIndexedDB();
+        // IndexedDBに遅延自動保存（連続操作時の負荷軽減）
+        debounceSaveState();
         showToast(`P.${pIdx + 1} に黒塗りを追加しました`, "✏️");
       };
 
@@ -2155,7 +2196,7 @@
           }
         }
 
-        saveStateToIndexedDB();
+        debounceSaveState();
         showToast(`P.${newestPage + 1} の黒塗りを1件取消しました`, "↩️");
       } else {
         showToast("取消できる黒塗りがありません", "ℹ️");
@@ -2172,7 +2213,7 @@
       if (!confirm("すべてのページの黒塗りを消去しますか？")) return;
       redactions = {};
       renderAllPages();
-      saveStateToIndexedDB();
+      debounceSaveState();
       showToast("全ページの黒塗りを消去しました", "🗑");
     }
 
@@ -2183,20 +2224,67 @@
         return;
       }
 
-      showToast("完成版PDFを作成中...", "⏳");
+      const progressModal = document.getElementById('exportProgressModal');
+      const progressBar = document.getElementById('exportProgressBar');
+      const progressText = document.getElementById('exportProgressText');
+      if (progressModal) {
+        if (progressBar) progressBar.style.width = '0%';
+        if (progressText) progressText.textContent = '準備中...';
+        progressModal.style.display = 'flex';
+      }
+
+      const total = combinedPages.length;
 
       try {
         const { PDFDocument, rgb } = PDFLib;
         const outDoc = await PDFDocument.create();
         const [targetW, targetH] = getSelectedPaperSize();
 
-        for (let pIdx = 0; pIdx < combinedPages.length; pIdx++) {
+        // 1. 各PDFファイルごとに必要なページインデックスをグループ化
+        // （同じPDFを200〜300回読み直すメモリ浪費を完全防止！）
+        const filePagesMap = new Map();
+        for (let pIdx = 0; pIdx < total; pIdx++) {
+          const pageInfo = combinedPages[pIdx];
+          if (pageInfo.type !== '編集後記' && !pageInfo.isImage && pageInfo.file) {
+            if (!filePagesMap.has(pageInfo.file)) {
+              filePagesMap.set(pageInfo.file, new Set());
+            }
+            filePagesMap.get(pageInfo.file).add(pageInfo.pageIndex - 1);
+          }
+        }
+
+        // 2. ユニークなPDFファイルごとに1度だけロードし、必要なページを一括埋め込み
+        const embeddedMap = new Map(); // file -> Map(origIdx -> embeddedPage)
+        let loadedFileCount = 0;
+        const totalUniqueFiles = filePagesMap.size;
+
+        for (let [file, pageSet] of filePagesMap.entries()) {
+          loadedFileCount++;
+          if (progressText) {
+            progressText.textContent = `PDFデータを解析中 (${loadedFileCount}/${totalUniqueFiles})...`;
+          }
+          const ab = await file.arrayBuffer();
+          const srcDoc = await PDFDocument.load(ab);
+          const pageIndices = Array.from(pageSet);
+          // 一括埋め込み（フォントやリソースを共有して劇的に軽量化＆高速化！）
+          const embeddedList = await outDoc.embedPdf(srcDoc, pageIndices);
+          const pageMap = new Map();
+          pageIndices.forEach((origIdx, i) => {
+            pageMap.set(origIdx, embeddedList[i]);
+          });
+          embeddedMap.set(file, pageMap);
+          // イベントループを解放してメモリ回収
+          await new Promise(r => setTimeout(r, 0));
+        }
+
+        // 3. 全ページを順番に出力ドキュメントへ配置
+        for (let pIdx = 0; pIdx < total; pIdx++) {
           const pageInfo = combinedPages[pIdx];
           const newPage = outDoc.addPage([targetW, targetH]);
 
           if (pageInfo.type === '編集後記') {
             const hiCanvas = document.createElement('canvas');
-            const hiDpi = 2.5; // 超高精細 2.5倍解像度
+            const hiDpi = 2.5;
             hiCanvas.width = targetW * hiDpi;
             hiCanvas.height = targetH * hiDpi;
             const hiCtx = hiCanvas.getContext('2d');
@@ -2220,7 +2308,6 @@
             const imgW = imgObj.width;
             const imgH = imgObj.height;
 
-            // 上下・左右の余白を完全解消するため、用紙縦横比に合わせた高解像度Canvasを用意
             const hiScale = 2.5;
             const canvasW = Math.round(targetW * hiScale);
             const canvasH = Math.round(targetH * hiScale);
@@ -2232,7 +2319,6 @@
             offCtx.fillStyle = '#FFFFFF';
             offCtx.fillRect(0, 0, canvasW, canvasH);
 
-            // Math.max で用紙全体を隙間なくカバー（余白ゼロ）
             const fitS = Math.max(canvasW / imgW, canvasH / imgH);
             const drawW = imgW * fitS;
             const drawH = imgH * fitS;
@@ -2241,7 +2327,6 @@
 
             offCtx.drawImage(imgObj.drawable, offX, offY, drawW, drawH);
 
-            // 高品質JPEGで埋め込み（ファイルサイズ軽量化＆高速化）
             const jpgUrl = offCanvas.toDataURL('image/jpeg', 0.92);
             const embeddedImg = await outDoc.embedJpg(jpgUrl);
 
@@ -2252,29 +2337,29 @@
               height: targetH,
             });
 
-            // メモリ即時解放
             imgObj.release();
             offCanvas.width = 0;
             offCanvas.height = 0;
           } else {
-            const ab = await pageInfo.file.arrayBuffer();
-            const srcDoc = await PDFDocument.load(ab);
-            const [embedded] = await outDoc.embedPdf(srcDoc, [pageInfo.pageIndex - 1]);
+            const pageMap = embeddedMap.get(pageInfo.file);
+            const embedded = pageMap ? pageMap.get(pageInfo.pageIndex - 1) : null;
+            if (embedded) {
+              const s = Math.min(targetW / embedded.width, targetH / embedded.height);
+              const fitW = embedded.width * s;
+              const fitH = embedded.height * s;
+              const offX = (targetW - fitW) / 2;
+              const offY = (targetH - fitH) / 2;
 
-            const s = Math.min(targetW / embedded.width, targetH / embedded.height);
-            const fitW = embedded.width * s;
-            const fitH = embedded.height * s;
-            const offX = (targetW - fitW) / 2;
-            const offY = (targetH - fitH) / 2;
-
-            newPage.drawPage(embedded, {
-              x: offX,
-              y: offY,
-              width: fitW,
-              height: fitH,
-            });
+              newPage.drawPage(embedded, {
+                x: offX,
+                y: offY,
+                width: fitW,
+                height: fitH,
+              });
+            }
           }
 
+          // 黒塗りを描画
           const pageRedacts = redactions[pIdx] || [];
           for (let r of pageRedacts) {
             const pdfY = targetH - (r.y + r.h);
@@ -2286,24 +2371,40 @@
               color: rgb(0, 0, 0),
             });
           }
+
+          // 進捗バー更新（5ページごと または 最終ページ）
+          if (pIdx % 5 === 0 || pIdx === total - 1) {
+            const pct = Math.round(((pIdx + 1) / total) * 100);
+            if (progressBar) progressBar.style.width = `${pct}%`;
+            if (progressText) progressText.textContent = `${pIdx + 1} / ${total} ページ処理中 (${pct}%)`;
+            await new Promise(r => setTimeout(r, 0));
+          }
         }
+
+        if (progressText) progressText.textContent = 'PDFファイルを生成・保存中...';
+        if (progressBar) progressBar.style.width = '100%';
+        await new Promise(r => setTimeout(r, 30));
 
         const pdfBytes = await outDoc.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
         const blobUrl = URL.createObjectURL(blob);
 
+        embeddedMap.clear();
+
         const rawIssueName = document.getElementById('afterwordIssueName').value.trim();
         const issueName = rawIssueName ? `〜${rawIssueName}〜` : '';
         const fileName = `ぴん球${issueName}　完成版.pdf`;
 
-        showToast("発行完了！🎉", "✅");
-
-        // ★ 発行完了に伴い、保持していた一時データは自動消去
+        // 発行完了に伴い、保持していた一時データは自動消去
         clearSavedStateInIndexedDB();
 
-        // 完了モーダルを表示（勝手にPDFを開かず、画面を維持して選択させる）
+        if (progressModal) progressModal.style.display = 'none';
+        showToast("発行完了！🎉", "✅");
+
+        // 完了モーダルを表示
         openDownloadModal(blob, blobUrl, fileName);
       } catch (err) {
+        if (progressModal) progressModal.style.display = 'none';
         console.error(err);
         alert("発行中にエラーが発生しました:\n" + err.message);
       }
