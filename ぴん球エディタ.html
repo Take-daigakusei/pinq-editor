@@ -336,6 +336,88 @@
       text-overflow: ellipsis;
     }
 
+    .aw-img-overlay {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 5;
+      touch-action: none;
+    }
+    .aw-img-box {
+      position: absolute;
+      box-sizing: border-box;
+      cursor: move;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .aw-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      display: block;
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    .aw-img-box.selected {
+      outline: 2px solid #2563eb;
+      outline-offset: 0;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.9);
+      z-index: 6;
+    }
+    .aw-handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #ffffff;
+      border: 2px solid #2563eb;
+      border-radius: 2px;
+      box-sizing: border-box;
+      z-index: 7;
+      touch-action: none;
+    }
+    .aw-handle-nw { left: -7px; top: -7px; cursor: nwse-resize; }
+    .aw-handle-ne { right: -7px; top: -7px; cursor: nesw-resize; }
+    .aw-handle-sw { left: -7px; bottom: -7px; cursor: nesw-resize; }
+    .aw-handle-se { right: -7px; bottom: -7px; cursor: nwse-resize; }
+    .aw-img-del {
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      z-index: 8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      padding: 0;
+      line-height: 1;
+    }
+    @media (max-width: 768px) {
+      .aw-handle {
+        width: 18px;
+        height: 18px;
+      }
+      .aw-handle-nw { left: -9px; top: -9px; }
+      .aw-handle-ne { right: -9px; top: -9px; }
+      .aw-handle-sw { left: -9px; bottom: -9px; }
+      .aw-handle-se { right: -9px; bottom: -9px; }
+      .aw-img-del {
+        width: 28px;
+        height: 28px;
+        top: -14px;
+        right: -14px;
+      }
+    }
+
     .action-bar {
       padding: 8px 12px;
       padding-bottom: max(8px, env(safe-area-inset-bottom));
@@ -719,7 +801,7 @@
 
             <div style="margin-bottom:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span class="form-label" style="margin-bottom:0; font-weight:700;">📷 掲載画像（任意・左下に配置）</span>
+                <span class="form-label" style="margin-bottom:0; font-weight:700;">📷 掲載画像（任意・自由配置）</span>
                 <button type="button" class="btn-icon" onclick="document.getElementById('afterwordImageInput').click()" style="color:var(--primary); font-weight:700; font-size:0.78rem;">＋ 画像を追加</button>
               </div>
               <div class="drop-zone" id="afterwordImageDropZone" onclick="document.getElementById('afterwordImageInput').click()" style="padding:14px 10px; min-height:auto;">
@@ -728,7 +810,7 @@
                 <input type="file" id="afterwordImageInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*" multiple style="display:none" onchange="handleAfterwordImageSelect(this.files)">
               </div>
               <div id="afterwordImagesList" class="afterword-images-grid" style="display:none;"></div>
-              <span style="font-size:0.72rem; color:#94a3b8; margin-top:4px; display:block;">コメントの下・奥付の左側に自動配置されます（複数可）</span>
+              <span style="font-size:0.72rem; color:#94a3b8; margin-top:4px; display:block;">プレビュー画面で画像をドラッグして移動、角をドラッグしてサイズ変更できます（パワポと同じ操作）</span>
             </div>
 
             <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #cbd5e1;">
@@ -1031,7 +1113,15 @@
           backCover: backCoverFile ? { name: backCoverFile.name, file: backCoverFile } : null,
           redactions: redactions,
           comments: comments,
-          afterwordImages: afterwordImages.map(f => ({ name: f.name, file: f })),
+          afterwordImages: afterwordImages.map(item => ({
+            id: item.id,
+            name: item.file.name,
+            file: item.file,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+          })),
           afterwordIssueName: document.getElementById('afterwordIssueName')?.value || '',
           afterwordDate: document.getElementById('afterwordDate')?.value || '',
           afterwordPublisher: document.getElementById('afterwordPublisher')?.value || '',
@@ -1098,8 +1188,12 @@
       { body: "", author: "" },
       { body: "", author: "" }
     ];
-    let afterwordImages = []; // File[]
+    let afterwordImages = []; // { id, file, x, y, w, h }[]  ※座標はPDFポイント
     let afterwordImageThumbUrls = []; // object URLs for thumbnails
+    let afterwordOverlayUrls = []; // object URLs used by preview overlays
+    let selectedAfterwordImageId = null;
+    const afterwordImageCache = new Map(); // id -> loadPreviewImage result
+    let afterwordImageIdSeq = 0;
 
     // スマホのダブルタップによる意図しない画面拡大（ズーム）を完全防止
     let lastTouchEndTime = 0;
@@ -1160,9 +1254,24 @@
             renderCommentsForm();
           }
           if (saved.afterwordImages && Array.isArray(saved.afterwordImages)) {
-            afterwordImages = saved.afterwordImages
-              .filter(item => item && item.file)
-              .map(item => item.file);
+            const restored = [];
+            for (let i = 0; i < saved.afterwordImages.length; i++) {
+              const item = saved.afterwordImages[i];
+              if (!item || !item.file) continue;
+              if (typeof item.x === 'number' && typeof item.y === 'number' && typeof item.w === 'number' && typeof item.h === 'number') {
+                restored.push({
+                  id: item.id || nextAfterwordImageId(),
+                  file: item.file,
+                  x: item.x,
+                  y: item.y,
+                  w: item.w,
+                  h: item.h
+                });
+              } else {
+                restored.push(await createAfterwordImageItem(item.file, restored.length));
+              }
+            }
+            afterwordImages = restored;
             renderAfterwordImagesList();
           }
           if (saved.afterwordIssueName) {
@@ -1246,11 +1355,83 @@
       debounceRefresh();
     }
 
+    function nextAfterwordImageId() {
+      afterwordImageIdSeq += 1;
+      return `awimg_${Date.now()}_${afterwordImageIdSeq}`;
+    }
+
     function revokeAfterwordThumbUrls() {
       afterwordImageThumbUrls.forEach(url => {
         try { URL.revokeObjectURL(url); } catch (e) {}
       });
       afterwordImageThumbUrls = [];
+    }
+
+    function revokeAfterwordOverlayUrls() {
+      afterwordOverlayUrls.forEach(url => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      });
+      afterwordOverlayUrls = [];
+    }
+
+    function clearAfterwordImageCacheEntry(id) {
+      const cached = afterwordImageCache.get(id);
+      if (cached && cached.release) {
+        try { cached.release(); } catch (e) {}
+      }
+      afterwordImageCache.delete(id);
+    }
+
+    function clearAfterwordImageCache() {
+      for (const id of Array.from(afterwordImageCache.keys())) {
+        clearAfterwordImageCacheEntry(id);
+      }
+    }
+
+    async function getCachedAfterwordImage(item, maxDim = 1400) {
+      const cached = afterwordImageCache.get(item.id);
+      if (cached && (cached._maxDim || 0) >= maxDim) {
+        return cached;
+      }
+      if (cached && cached.release) {
+        try { cached.release(); } catch (e) {}
+      }
+      const imgObj = await loadPreviewImage(item.file, maxDim);
+      imgObj._maxDim = maxDim;
+      afterwordImageCache.set(item.id, imgObj);
+      return imgObj;
+    }
+
+    async function createAfterwordImageItem(file, indexHint = afterwordImages.length) {
+      let aspect = 4 / 3;
+      try {
+        const probe = await loadPreviewImage(file, 400);
+        aspect = probe.width / Math.max(1, probe.height);
+        probe.release();
+      } catch (e) {}
+
+      const defaultW = 180;
+      const defaultH = defaultW / Math.max(0.2, aspect);
+      const offset = indexHint * 28;
+      const maxX = Math.max(20, targetPdfWidth - defaultW - 20);
+      const maxY = Math.max(20, targetPdfHeight - defaultH - 20);
+
+      return {
+        id: nextAfterwordImageId(),
+        file,
+        x: Math.min(85 + offset, maxX),
+        y: Math.min(360 + offset, maxY),
+        w: defaultW,
+        h: defaultH
+      };
+    }
+
+    function clampAfterwordImage(item) {
+      const minSize = 36;
+      item.w = Math.max(minSize, item.w);
+      item.h = Math.max(minSize, item.h);
+      item.x = Math.max(0, Math.min(item.x, targetPdfWidth - item.w));
+      item.y = Math.max(0, Math.min(item.y, targetPdfHeight - item.h));
     }
 
     function renderAfterwordImagesList() {
@@ -1264,26 +1445,30 @@
       if (afterwordImages.length === 0) {
         list.style.display = 'none';
         if (dropZone) dropZone.style.display = 'block';
+        selectedAfterwordImageId = null;
         return;
       }
 
       list.style.display = 'flex';
       if (dropZone) dropZone.style.display = 'none';
 
-      afterwordImages.forEach((file, idx) => {
-        const thumbUrl = URL.createObjectURL(file);
+      afterwordImages.forEach((item) => {
+        const thumbUrl = URL.createObjectURL(item.file);
         afterwordImageThumbUrls.push(thumbUrl);
         const div = document.createElement('div');
         div.className = 'afterword-image-thumb';
+        if (item.id === selectedAfterwordImageId) {
+          div.style.outline = '2px solid #2563eb';
+        }
         div.innerHTML = `
-          <img src="${thumbUrl}" alt="${file.name}">
-          <button type="button" class="thumb-remove" onclick="removeAfterwordImage(${idx})" title="削除">✕</button>
-          <div class="thumb-name">${file.name}</div>
+          <img src="${thumbUrl}" alt="${item.file.name}">
+          <button type="button" class="thumb-remove" onclick="event.stopPropagation(); removeAfterwordImageById('${item.id}')" title="削除">✕</button>
+          <div class="thumb-name">${item.file.name}</div>
         `;
+        div.onclick = () => selectAfterwordImage(item.id, true);
         list.appendChild(div);
       });
 
-      // 追加ボタン用の小さなカード
       const addBtn = document.createElement('button');
       addBtn.type = 'button';
       addBtn.className = 'afterword-image-thumb';
@@ -1293,12 +1478,15 @@
       list.appendChild(addBtn);
     }
 
-    function handleAfterwordImageSelect(files) {
+    async function handleAfterwordImageSelect(files) {
       if (!files || files.length === 0) return;
       let added = 0;
+      let lastId = null;
       for (const f of files) {
         if (isImageFile(f)) {
-          afterwordImages.push(f);
+          const item = await createAfterwordImageItem(f, afterwordImages.length);
+          afterwordImages.push(item);
+          lastId = item.id;
           added++;
         }
       }
@@ -1308,26 +1496,286 @@
         showToast("画像ファイルを選択してください", "⚠️");
         return;
       }
+      selectedAfterwordImageId = lastId;
       renderAfterwordImagesList();
       debounceRefresh();
       debounceSaveState();
-      showToast(`${added}枚の画像を追加しました`, "📷");
+      showToast(`${added}枚追加。プレビューでドラッグして配置できます`, "📷");
+      setTimeout(() => {
+        goToPreviewTab();
+        focusAfterwordPageInPreview();
+      }, 80);
+    }
+
+    function removeAfterwordImageById(id) {
+      const idx = afterwordImages.findIndex(item => item.id === id);
+      if (idx < 0) return;
+      clearAfterwordImageCacheEntry(id);
+      afterwordImages.splice(idx, 1);
+      if (selectedAfterwordImageId === id) selectedAfterwordImageId = null;
+      renderAfterwordImagesList();
+      debounceRefresh();
+      debounceSaveState();
     }
 
     function removeAfterwordImage(idx) {
       if (idx < 0 || idx >= afterwordImages.length) return;
-      afterwordImages.splice(idx, 1);
-      renderAfterwordImagesList();
-      debounceRefresh();
-      debounceSaveState();
+      removeAfterwordImageById(afterwordImages[idx].id);
     }
 
     function clearAfterwordImages() {
+      clearAfterwordImageCache();
       afterwordImages = [];
+      selectedAfterwordImageId = null;
       revokeAfterwordThumbUrls();
+      revokeAfterwordOverlayUrls();
       renderAfterwordImagesList();
       const input = document.getElementById('afterwordImageInput');
       if (input) input.value = '';
+    }
+
+    function selectAfterwordImage(id, scrollToPage = false) {
+      selectedAfterwordImageId = id;
+      renderAfterwordImagesList();
+      refreshVisibleAfterwordOverlay();
+      if (scrollToPage) {
+        goToPreviewTab();
+        focusAfterwordPageInPreview();
+      }
+    }
+
+    function focusAfterwordPageInPreview() {
+      const awIdx = combinedPages.findIndex(p => p.type === '編集後記');
+      if (awIdx < 0) return;
+      currentPageIndex = awIdx;
+      const card = document.getElementById(`page-card-${awIdx}`);
+      if (card) {
+        card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+      updatePageIndicatorText();
+    }
+
+    function refreshVisibleAfterwordOverlay() {
+      const awIdx = combinedPages.findIndex(p => p.type === '編集後記');
+      if (awIdx < 0) return;
+      const card = document.getElementById(`page-card-${awIdx}`);
+      if (!card) return;
+      const slot = card.querySelector('.canvas-slot');
+      if (!slot || !slot.querySelector('canvas')) return;
+      const canvas = slot.querySelector('canvas');
+      const cssW = canvas.clientWidth || parseInt(slot.style.width, 10);
+      const cssH = canvas.clientHeight || parseInt(slot.style.height, 10);
+      if (cssW > 0 && cssH > 0) {
+        attachAfterwordImageOverlay(slot, cssW, cssH);
+      }
+    }
+
+    function attachAfterwordImageOverlay(slot, cssW, cssH) {
+      const old = slot.querySelector('.aw-img-overlay');
+      if (old) old.remove();
+      revokeAfterwordOverlayUrls();
+
+      if (afterwordImages.length === 0) return;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'aw-img-overlay';
+      overlay.style.width = `${cssW}px`;
+      overlay.style.height = `${cssH}px`;
+      overlay.style.pointerEvents = (editorMode === 'redact') ? 'none' : 'auto';
+
+      const scale = cssW / targetPdfWidth;
+
+      afterwordImages.forEach((item) => {
+        const box = document.createElement('div');
+        const isSelected = item.id === selectedAfterwordImageId;
+        box.className = 'aw-img-box' + (isSelected ? ' selected' : '');
+        box.dataset.id = item.id;
+        box.style.left = `${item.x * scale}px`;
+        box.style.top = `${item.y * scale}px`;
+        box.style.width = `${item.w * scale}px`;
+        box.style.height = `${item.h * scale}px`;
+
+        const img = document.createElement('img');
+        const url = URL.createObjectURL(item.file);
+        afterwordOverlayUrls.push(url);
+        img.src = url;
+        img.alt = item.file.name;
+        box.appendChild(img);
+
+        if (isSelected) {
+          ['nw', 'ne', 'sw', 'se'].forEach((pos) => {
+            const handle = document.createElement('div');
+            handle.className = `aw-handle aw-handle-${pos}`;
+            handle.dataset.handle = pos;
+            box.appendChild(handle);
+          });
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'aw-img-del';
+          del.title = '画像を削除';
+          del.textContent = '✕';
+          del.addEventListener('pointerdown', (e) => e.stopPropagation());
+          del.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            removeAfterwordImageById(item.id);
+          });
+          box.appendChild(del);
+        }
+
+        overlay.appendChild(box);
+      });
+
+      setupAfterwordImageInteractions(overlay, slot, cssW, cssH, scale);
+      slot.appendChild(overlay);
+    }
+
+    function syncAfterwordSelectionChrome(overlay) {
+      if (!overlay) return;
+      overlay.querySelectorAll('.aw-img-box').forEach((box) => {
+        const id = box.dataset.id;
+        const selected = id === selectedAfterwordImageId;
+        box.classList.toggle('selected', selected);
+        box.querySelectorAll('.aw-handle, .aw-img-del').forEach(el => el.remove());
+        if (!selected) return;
+
+        ['nw', 'ne', 'sw', 'se'].forEach((pos) => {
+          const handle = document.createElement('div');
+          handle.className = `aw-handle aw-handle-${pos}`;
+          handle.dataset.handle = pos;
+          box.appendChild(handle);
+        });
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'aw-img-del';
+        del.title = '画像を削除';
+        del.textContent = '✕';
+        del.addEventListener('pointerdown', (e) => e.stopPropagation());
+        del.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          removeAfterwordImageById(id);
+        });
+        box.appendChild(del);
+      });
+    }
+
+    function setupAfterwordImageInteractions(overlay, slot, cssW, cssH, scale) {
+      let dragState = null;
+
+      const updateBoxDom = (item) => {
+        const box = overlay.querySelector(`.aw-img-box[data-id="${item.id}"]`);
+        if (!box) return;
+        box.style.left = `${item.x * scale}px`;
+        box.style.top = `${item.y * scale}px`;
+        box.style.width = `${item.w * scale}px`;
+        box.style.height = `${item.h * scale}px`;
+      };
+
+      overlay.addEventListener('pointerdown', (e) => {
+        if (editorMode === 'redact') return;
+        if (e.target.closest('.aw-img-del')) return;
+
+        const handleEl = e.target.closest('.aw-handle');
+        const boxEl = e.target.closest('.aw-img-box');
+
+        if (!boxEl) {
+          if (selectedAfterwordImageId) {
+            selectedAfterwordImageId = null;
+            renderAfterwordImagesList();
+            syncAfterwordSelectionChrome(overlay);
+          }
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const id = boxEl.dataset.id;
+        const item = afterwordImages.find(it => it.id === id);
+        if (!item) return;
+
+        if (selectedAfterwordImageId !== id) {
+          selectedAfterwordImageId = id;
+          renderAfterwordImagesList();
+          syncAfterwordSelectionChrome(overlay);
+        }
+
+        // リサイズ開始時は選択済みハンドルを使う（未選択で掴んだ場合は移動）
+        const activeHandle = handleEl || null;
+        const aspect = item.w / Math.max(0.01, item.h);
+        dragState = {
+          id,
+          mode: activeHandle ? ('resize-' + activeHandle.dataset.handle) : 'move',
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          origX: item.x,
+          origY: item.y,
+          origW: item.w,
+          origH: item.h,
+          aspect
+        };
+        try {
+          overlay.setPointerCapture(e.pointerId);
+        } catch (err) {}
+      });
+
+      overlay.addEventListener('pointermove', (e) => {
+        if (!dragState) return;
+        e.preventDefault();
+        const item = afterwordImages.find(it => it.id === dragState.id);
+        if (!item) return;
+
+        const dx = (e.clientX - dragState.startClientX) / scale;
+        const dy = (e.clientY - dragState.startClientY) / scale;
+
+        if (dragState.mode === 'move') {
+          item.x = dragState.origX + dx;
+          item.y = dragState.origY + dy;
+          clampAfterwordImage(item);
+        } else {
+          const handle = dragState.mode.replace('resize-', '');
+          let newW = dragState.origW;
+          let newH = dragState.origH;
+          let newX = dragState.origX;
+          let newY = dragState.origY;
+
+          if (handle === 'se') {
+            newW = Math.max(36, dragState.origW + dx);
+            newH = newW / dragState.aspect;
+          } else if (handle === 'sw') {
+            newW = Math.max(36, dragState.origW - dx);
+            newH = newW / dragState.aspect;
+            newX = dragState.origX + (dragState.origW - newW);
+          } else if (handle === 'ne') {
+            newW = Math.max(36, dragState.origW + dx);
+            newH = newW / dragState.aspect;
+            newY = dragState.origY + (dragState.origH - newH);
+          } else if (handle === 'nw') {
+            newW = Math.max(36, dragState.origW - dx);
+            newH = newW / dragState.aspect;
+            newX = dragState.origX + (dragState.origW - newW);
+            newY = dragState.origY + (dragState.origH - newH);
+          }
+
+          item.x = newX;
+          item.y = newY;
+          item.w = newW;
+          item.h = newH;
+          clampAfterwordImage(item);
+        }
+
+        updateBoxDom(item);
+      });
+
+      const endDrag = () => {
+        if (!dragState) return;
+        dragState = null;
+        debounceSaveState();
+      };
+
+      overlay.addEventListener('pointerup', endDrag);
+      overlay.addEventListener('pointercancel', endDrag);
     }
 
     function switchMobileTab(tab) {
@@ -1765,7 +2213,11 @@
       const scale = actualW / targetPdfWidth;
 
       if (pageInfo.type === '編集後記') {
-        await drawExactAfterword(ctx, actualW, actualH, scale);
+        // スクロール一覧: 画像はオーバーレイでパワポ風に操作
+        // 黒塗り単ページ: キャンバスに画像も描画
+        await drawExactAfterword(ctx, actualW, actualH, scale, {
+          includeImages: editorMode !== 'scroll'
+        });
       } else if (pageInfo.isImage) {
         try {
           // プレビュー用画像
@@ -1868,7 +2320,7 @@
     // - A4（595.28pt）に対する黄金比率:
     //   タイトル 17.5pt, 本文 11.0pt, 行送り 23.5pt, 奥付 8.5pt
     // ========================================================
-    async function drawExactAfterword(ctx, w, h, scale) {
+    async function drawExactAfterword(ctx, w, h, scale, options = {}) {
       const serifFont = '"Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Georgia", serif';
 
       // 1. タイトル「編  集  後  記」（17.5pt、上品なサイズと文字間隔）
@@ -1948,51 +2400,8 @@
       const boxX = w - boxMarginRight - boxW;
       const boxY = h - boxMarginBottom - boxH;
 
-      // 4. 掲載画像（コメント下・奥付の左側）
-      if (afterwordImages.length > 0) {
-        const gap = 10 * scale;
-        const imgLeft = marginX;
-        const imgTop = curY + 8 * scale;
-        const imgRight = boxX - gap;
-        const imgBottom = h - boxMarginBottom;
-        const maxW = imgRight - imgLeft;
-        const maxH = imgBottom - imgTop;
-
-        if (maxW >= 40 * scale && maxH >= 40 * scale) {
-          const loaded = [];
-          for (const file of afterwordImages) {
-            try {
-              const imgObj = await loadPreviewImage(file, 1400);
-              loaded.push(imgObj);
-            } catch (err) {
-              console.warn("編集後記画像の読み込み失敗:", file.name, err);
-            }
-          }
-
-          if (loaded.length > 0) {
-            const spacing = 6 * scale;
-            const n = loaded.length;
-            const totalAspect = loaded.reduce((s, img) => s + (img.width / Math.max(1, img.height)), 0);
-            let fitH = (maxW - (n - 1) * spacing) / Math.max(0.01, totalAspect);
-            if (fitH > maxH) fitH = maxH;
-
-            let totalDrawW = loaded.reduce((s, img) => s + (img.width / Math.max(1, img.height)) * fitH, 0) + (n - 1) * spacing;
-            if (totalDrawW > maxW && totalDrawW > 0) {
-              fitH *= maxW / totalDrawW;
-            }
-
-            let x = imgLeft;
-            const y = imgTop;
-            for (const img of loaded) {
-              const drawW = (img.width / Math.max(1, img.height)) * fitH;
-              const drawH = fitH;
-              ctx.drawImage(img.drawable, x, y, drawW, drawH);
-              x += drawW + spacing;
-              img.release();
-            }
-          }
-        }
-      }
+      // 4. 右下の奥付ボックス（画像より下に描画し、自由配置画像は上に重ねられる）
+      // ※画像描画は奥付の後
 
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = Math.max(0.8, 0.8 * scale);
@@ -2031,6 +2440,24 @@
         ctx.fillText(`${prefix}${ed}`, indentX, boxCurY);
         boxCurY += boxLineH;
       });
+
+      // 5. 掲載画像（自由配置・奥付の上に重ねる）
+      if (options.includeImages !== false && afterwordImages.length > 0) {
+        for (const item of afterwordImages) {
+          try {
+            const imgObj = await getCachedAfterwordImage(item, options.imageMaxDim || 1400);
+            ctx.drawImage(
+              imgObj.drawable,
+              item.x * scale,
+              item.y * scale,
+              item.w * scale,
+              item.h * scale
+            );
+          } catch (err) {
+            console.warn("編集後記画像の描画失敗:", item.file && item.file.name, err);
+          }
+        }
+      }
     }
 
     let editorMode = 'scroll'; // 'scroll' または 'redact'
@@ -2055,6 +2482,9 @@
       document.querySelectorAll('.canvas-slot canvas').forEach(cvs => {
         cvs.style.touchAction = (mode === 'redact') ? 'none' : 'pan-y pan-x';
         cvs.style.cursor = (mode === 'redact') ? 'crosshair' : 'default';
+      });
+      document.querySelectorAll('.aw-img-overlay').forEach(ov => {
+        ov.style.pointerEvents = (mode === 'redact') ? 'none' : 'auto';
       });
     }
 
@@ -2217,11 +2647,17 @@
               const txt = slot.querySelector('span');
               if (txt) txt.remove();
 
-              renderPageContent(combinedPages[pIdx], pIdx, canvas, cssW, cssH, dpr);
+              renderPageContent(combinedPages[pIdx], pIdx, canvas, cssW, cssH, dpr).then(() => {
+                if (combinedPages[pIdx] && combinedPages[pIdx].type === '編集後記') {
+                  attachAfterwordImageOverlay(slot, cssW, cssH);
+                }
+              });
               attachCardRedactEvents(canvas, pIdx, selBox, cssW, cssH, dpr);
             }
           } else {
             // 画面外に出た -> Canvas破棄でWebKitメモリ即時解放！
+            const existingOverlay = slot.querySelector('.aw-img-overlay');
+            if (existingOverlay) existingOverlay.remove();
             const existingCanvas = slot.querySelector('canvas');
             if (existingCanvas) {
               existingCanvas.width = 0;
@@ -2499,7 +2935,10 @@
             hiCtx.fillStyle = '#FFFFFF';
             hiCtx.fillRect(0, 0, hiCanvas.width, hiCanvas.height);
 
-            await drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi);
+            await drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi, {
+              includeImages: true,
+              imageMaxDim: 2200
+            });
 
             const pngUrl = hiCanvas.toDataURL('image/png');
             const pngImg = await outDoc.embedPng(pngUrl);
