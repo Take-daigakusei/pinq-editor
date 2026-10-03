@@ -1514,6 +1514,8 @@
       afterwordImages.splice(idx, 1);
       if (selectedAfterwordImageId === id) selectedAfterwordImageId = null;
       renderAfterwordImagesList();
+      // オーバーレイを即時更新（プレビューから画像を消す）
+      refreshVisibleAfterwordOverlay();
       debounceRefresh();
       debounceSaveState();
     }
