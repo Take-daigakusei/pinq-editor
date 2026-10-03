@@ -282,6 +282,60 @@
       font-weight: 600;
     }
 
+    .afterword-images-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .afterword-image-thumb {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      background: #e2e8f0;
+      flex-shrink: 0;
+    }
+    .afterword-image-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .afterword-image-thumb .thumb-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: rgba(15, 23, 42, 0.75);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      width: 22px;
+      height: 22px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      line-height: 1;
+    }
+    .afterword-image-thumb .thumb-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      color: #f8fafc;
+      font-size: 0.62rem;
+      padding: 2px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .action-bar {
       padding: 8px 12px;
       padding-bottom: max(8px, env(safe-area-inset-bottom));
@@ -663,6 +717,20 @@
               <div id="commentsContainer"></div>
             </div>
 
+            <div style="margin-bottom:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span class="form-label" style="margin-bottom:0; font-weight:700;">📷 掲載画像（任意・左下に配置）</span>
+                <button type="button" class="btn-icon" onclick="document.getElementById('afterwordImageInput').click()" style="color:var(--primary); font-weight:700; font-size:0.78rem;">＋ 画像を追加</button>
+              </div>
+              <div class="drop-zone" id="afterwordImageDropZone" onclick="document.getElementById('afterwordImageInput').click()" style="padding:14px 10px; min-height:auto;">
+                <p style="margin:0 0 6px;">写真・画像をタップ／ドロップで追加</p>
+                <span class="btn-select">＋ 画像を選択</span>
+                <input type="file" id="afterwordImageInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*" multiple style="display:none" onchange="handleAfterwordImageSelect(this.files)">
+              </div>
+              <div id="afterwordImagesList" class="afterword-images-grid" style="display:none;"></div>
+              <span style="font-size:0.72rem; color:#94a3b8; margin-top:4px; display:block;">コメントの下・奥付の左側に自動配置されます（複数可）</span>
+            </div>
+
             <div style="background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #cbd5e1;">
               <span class="form-label" style="color:#1e293b; font-weight:700; margin-bottom:6px;">📄 右下の発行情報枠（奥付）</span>
               
@@ -963,6 +1031,7 @@
           backCover: backCoverFile ? { name: backCoverFile.name, file: backCoverFile } : null,
           redactions: redactions,
           comments: comments,
+          afterwordImages: afterwordImages.map(f => ({ name: f.name, file: f })),
           afterwordIssueName: document.getElementById('afterwordIssueName')?.value || '',
           afterwordDate: document.getElementById('afterwordDate')?.value || '',
           afterwordPublisher: document.getElementById('afterwordPublisher')?.value || '',
@@ -1029,6 +1098,8 @@
       { body: "", author: "" },
       { body: "", author: "" }
     ];
+    let afterwordImages = []; // File[]
+    let afterwordImageThumbUrls = []; // object URLs for thumbnails
 
     // スマホのダブルタップによる意図しない画面拡大（ズーム）を完全防止
     let lastTouchEndTime = 0;
@@ -1088,6 +1159,12 @@
             comments = saved.comments;
             renderCommentsForm();
           }
+          if (saved.afterwordImages && Array.isArray(saved.afterwordImages)) {
+            afterwordImages = saved.afterwordImages
+              .filter(item => item && item.file)
+              .map(item => item.file);
+            renderAfterwordImagesList();
+          }
           if (saved.afterwordIssueName) {
             document.getElementById('afterwordIssueName').value = saved.afterwordIssueName;
           }
@@ -1100,7 +1177,7 @@
           if (saved.selectedPaperSize) {
             document.getElementById('selectPaperSize').value = saved.selectedPaperSize;
           }
-          if (coverFile || bodyFiles.length > 0 || backCoverFile) {
+          if (coverFile || bodyFiles.length > 0 || backCoverFile || afterwordImages.length > 0) {
             refreshPreview();
             showToast("前回の編集データを復元しました ✨", "🔄");
           }
@@ -1167,6 +1244,90 @@
       comments[idx].author = val;
       updateEditorsDisplay();
       debounceRefresh();
+    }
+
+    function revokeAfterwordThumbUrls() {
+      afterwordImageThumbUrls.forEach(url => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      });
+      afterwordImageThumbUrls = [];
+    }
+
+    function renderAfterwordImagesList() {
+      const list = document.getElementById('afterwordImagesList');
+      const dropZone = document.getElementById('afterwordImageDropZone');
+      if (!list) return;
+
+      revokeAfterwordThumbUrls();
+      list.innerHTML = '';
+
+      if (afterwordImages.length === 0) {
+        list.style.display = 'none';
+        if (dropZone) dropZone.style.display = 'block';
+        return;
+      }
+
+      list.style.display = 'flex';
+      if (dropZone) dropZone.style.display = 'none';
+
+      afterwordImages.forEach((file, idx) => {
+        const thumbUrl = URL.createObjectURL(file);
+        afterwordImageThumbUrls.push(thumbUrl);
+        const div = document.createElement('div');
+        div.className = 'afterword-image-thumb';
+        div.innerHTML = `
+          <img src="${thumbUrl}" alt="${file.name}">
+          <button type="button" class="thumb-remove" onclick="removeAfterwordImage(${idx})" title="削除">✕</button>
+          <div class="thumb-name">${file.name}</div>
+        `;
+        list.appendChild(div);
+      });
+
+      // 追加ボタン用の小さなカード
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'afterword-image-thumb';
+      addBtn.style.cssText = 'border:1px dashed #94a3b8; background:#f8fafc; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:0.78rem; font-weight:700;';
+      addBtn.textContent = '＋ 追加';
+      addBtn.onclick = () => document.getElementById('afterwordImageInput').click();
+      list.appendChild(addBtn);
+    }
+
+    function handleAfterwordImageSelect(files) {
+      if (!files || files.length === 0) return;
+      let added = 0;
+      for (const f of files) {
+        if (isImageFile(f)) {
+          afterwordImages.push(f);
+          added++;
+        }
+      }
+      const input = document.getElementById('afterwordImageInput');
+      if (input) input.value = '';
+      if (added === 0) {
+        showToast("画像ファイルを選択してください", "⚠️");
+        return;
+      }
+      renderAfterwordImagesList();
+      debounceRefresh();
+      debounceSaveState();
+      showToast(`${added}枚の画像を追加しました`, "📷");
+    }
+
+    function removeAfterwordImage(idx) {
+      if (idx < 0 || idx >= afterwordImages.length) return;
+      afterwordImages.splice(idx, 1);
+      renderAfterwordImagesList();
+      debounceRefresh();
+      debounceSaveState();
+    }
+
+    function clearAfterwordImages() {
+      afterwordImages = [];
+      revokeAfterwordThumbUrls();
+      renderAfterwordImagesList();
+      const input = document.getElementById('afterwordImageInput');
+      if (input) input.value = '';
     }
 
     function switchMobileTab(tab) {
@@ -1308,6 +1469,7 @@
       setupZone('coverDropZone', 'coverInput', handleCoverSelect);
       setupZone('bodyDropZone', 'bodyInput', handleBodySelect);
       setupZone('backCoverDropZone', 'backCoverInput', handleBackCoverSelect);
+      setupZone('afterwordImageDropZone', 'afterwordImageInput', handleAfterwordImageSelect);
     }
 
     function handleCoverSelect(files) {
@@ -1603,7 +1765,7 @@
       const scale = actualW / targetPdfWidth;
 
       if (pageInfo.type === '編集後記') {
-        drawExactAfterword(ctx, actualW, actualH, scale);
+        await drawExactAfterword(ctx, actualW, actualH, scale);
       } else if (pageInfo.isImage) {
         try {
           // プレビュー用画像
@@ -1706,7 +1868,7 @@
     // - A4（595.28pt）に対する黄金比率:
     //   タイトル 17.5pt, 本文 11.0pt, 行送り 23.5pt, 奥付 8.5pt
     // ========================================================
-    function drawExactAfterword(ctx, w, h, scale) {
+    async function drawExactAfterword(ctx, w, h, scale) {
       const serifFont = '"Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Georgia", serif';
 
       // 1. タイトル「編  集  後  記」（17.5pt、上品なサイズと文字間隔）
@@ -1785,6 +1947,52 @@
       const boxMarginBottom = 90 * scale;
       const boxX = w - boxMarginRight - boxW;
       const boxY = h - boxMarginBottom - boxH;
+
+      // 4. 掲載画像（コメント下・奥付の左側）
+      if (afterwordImages.length > 0) {
+        const gap = 10 * scale;
+        const imgLeft = marginX;
+        const imgTop = curY + 8 * scale;
+        const imgRight = boxX - gap;
+        const imgBottom = h - boxMarginBottom;
+        const maxW = imgRight - imgLeft;
+        const maxH = imgBottom - imgTop;
+
+        if (maxW >= 40 * scale && maxH >= 40 * scale) {
+          const loaded = [];
+          for (const file of afterwordImages) {
+            try {
+              const imgObj = await loadPreviewImage(file, 1400);
+              loaded.push(imgObj);
+            } catch (err) {
+              console.warn("編集後記画像の読み込み失敗:", file.name, err);
+            }
+          }
+
+          if (loaded.length > 0) {
+            const spacing = 6 * scale;
+            const n = loaded.length;
+            const totalAspect = loaded.reduce((s, img) => s + (img.width / Math.max(1, img.height)), 0);
+            let fitH = (maxW - (n - 1) * spacing) / Math.max(0.01, totalAspect);
+            if (fitH > maxH) fitH = maxH;
+
+            let totalDrawW = loaded.reduce((s, img) => s + (img.width / Math.max(1, img.height)) * fitH, 0) + (n - 1) * spacing;
+            if (totalDrawW > maxW && totalDrawW > 0) {
+              fitH *= maxW / totalDrawW;
+            }
+
+            let x = imgLeft;
+            const y = imgTop;
+            for (const img of loaded) {
+              const drawW = (img.width / Math.max(1, img.height)) * fitH;
+              const drawH = fitH;
+              ctx.drawImage(img.drawable, x, y, drawW, drawH);
+              x += drawW + spacing;
+              img.release();
+            }
+          }
+        }
+      }
 
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = Math.max(0.8, 0.8 * scale);
@@ -2291,7 +2499,7 @@
             hiCtx.fillStyle = '#FFFFFF';
             hiCtx.fillRect(0, 0, hiCanvas.width, hiCanvas.height);
 
-            drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi);
+            await drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi);
 
             const pngUrl = hiCanvas.toDataURL('image/png');
             const pngImg = await outDoc.embedPng(pngUrl);
@@ -2438,6 +2646,7 @@
       redactions = {};
       comments = [{ body: "", author: "" }, { body: "", author: "" }];
       renderCommentsForm();
+      clearAfterwordImages();
       document.getElementById('afterwordIssueName').value = '';
       document.getElementById('afterwordPublisher').value = '';
       const today = new Date();
