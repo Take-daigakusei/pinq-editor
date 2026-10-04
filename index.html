@@ -341,9 +341,11 @@
       left: 0;
       top: 0;
       z-index: 5;
-      touch-action: none;
+      pointer-events: none;
     }
+    .aw-img-overlay.aw-redact .aw-img-box { pointer-events: none; }
     .aw-img-box {
+      pointer-events: auto;
       position: absolute;
       box-sizing: border-box;
       cursor: move;
@@ -1583,7 +1585,7 @@
       overlay.className = 'aw-img-overlay';
       overlay.style.width = `${cssW}px`;
       overlay.style.height = `${cssH}px`;
-      overlay.style.pointerEvents = (editorMode === 'redact') ? 'none' : 'auto';
+      overlay.classList.toggle('aw-redact', editorMode === 'redact');
 
       const scale = cssW / targetPdfWidth;
 
@@ -2486,7 +2488,7 @@
         cvs.style.cursor = (mode === 'redact') ? 'crosshair' : 'default';
       });
       document.querySelectorAll('.aw-img-overlay').forEach(ov => {
-        ov.style.pointerEvents = (mode === 'redact') ? 'none' : 'auto';
+        ov.classList.toggle('aw-redact', mode === 'redact');
       });
     }
 
