@@ -3138,9 +3138,18 @@
       downloadPdfDirect();
     }
 
+    // 幅が変わったときのみ再描画（スマホのアドレスバー伸縮による高さのみの resize では
+    // 一覧を作り直さない。作り直すとスクロール位置が飛び、端でスクロール不能になる）
+    let _lastResizeW = window.innerWidth;
+    let _resizeTimer = null;
     window.addEventListener('resize', () => {
-      if (editorMode === 'scroll') renderAllPages(currentPageIndex);
-      else renderCurrentPage();
+      clearTimeout(_resizeTimer);
+      _resizeTimer = setTimeout(() => {
+        if (window.innerWidth === _lastResizeW) return;
+        _lastResizeW = window.innerWidth;
+        if (editorMode === 'scroll') renderAllPages(currentPageIndex);
+        else renderCurrentPage();
+      }, 200);
     });
 
     // PC用: Ctrl + マウスホイールによる直感的なズーム操作
