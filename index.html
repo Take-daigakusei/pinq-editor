@@ -872,6 +872,7 @@
             <option value="B5">B5縦 (182 × 257 mm)</option>
             <option value="A5">A5縦 (148 × 210 mm)</option>
             <option value="A4_LANDSCAPE">A4横 (297 × 210 mm)</option>
+            <option value="AUTO">A4（元の縦横のまま・縦横が混ざる）</option>
           </select>
         </div>
 
@@ -2040,7 +2041,26 @@
       if (val === 'B5') return [515.91, 728.50];
       if (val === 'A5') return [419.53, 595.28];
       if (val === 'A4_LANDSCAPE') return [841.89, 595.28];
-      return [595.28, 841.89];
+      return [595.28, 841.89];  // 'AUTO' の基準もA4縦（横長の元ページだけA4横にする）
+    }
+
+    function isAutoOrientation() {
+      return document.getElementById('selectPaperSize').value === 'AUTO';
+    }
+
+    // 「元の縦横のまま」のとき、横長の元ページならA4横の大きさを返す（それ以外は undefined = 全体の用紙サイズ）
+    async function autoPageSize(pdf, pageNum) {
+      if (!isAutoOrientation()) return undefined;
+      try {
+        const vp = (await pdf.getPage(pageNum)).getViewport({ scale: 1.0 });
+        if (vp.width > vp.height * 1.02) return [841.89, 595.28];
+      } catch (e) {}
+      return undefined;
+    }
+
+    // このページの用紙サイズ [幅, 高さ]（pt）
+    function pageSizeOf(pageInfo) {
+      return (pageInfo && pageInfo.size) ? pageInfo.size : [targetPdfWidth, targetPdfHeight];
     }
 
     async function refreshPreview() {
@@ -2054,7 +2074,7 @@
           try {
             const pdf = await getOrLoadPdfDoc(coverFile);
             for (let i = 1; i <= pdf.numPages; i++) {
-              combinedPages.push({ type: '表紙', file: coverFile, pageIndex: i, name: coverFile.name });
+              combinedPages.push({ type: '表紙', file: coverFile, pageIndex: i, name: coverFile.name, size: await autoPageSize(pdf, i) });
             }
           } catch (e) {
             console.error(e);
@@ -2069,7 +2089,7 @@
           try {
             const pdf = await getOrLoadPdfDoc(item.file);
             for (let i = 1; i <= pdf.numPages; i++) {
-              combinedPages.push({ type: '本文', file: item.file, pageIndex: i, name: item.name });
+              combinedPages.push({ type: '本文', file: item.file, pageIndex: i, name: item.name, size: await autoPageSize(pdf, i) });
             }
           } catch (e) {
             console.error(e);
@@ -2088,7 +2108,7 @@
           try {
             const pdf = await getOrLoadPdfDoc(backCoverFile);
             for (let i = 1; i <= pdf.numPages; i++) {
-              combinedPages.push({ type: '裏表紙', file: backCoverFile, pageIndex: i, name: backCoverFile.name });
+              combinedPages.push({ type: '裏表紙', file: backCoverFile, pageIndex: i, name: backCoverFile.name, size: await autoPageSize(pdf, i) });
             }
           } catch (e) {
             console.error(e);
@@ -2111,7 +2131,7 @@
         const allPagesContainer = document.getElementById('allPagesContainer');
         const canvasContainer = document.getElementById('canvasContainer');
         allPagesContainer.style.display = 'flex';
-        canvasContainer.style.display = 'none';
+        if (canvasContainer) canvasContainer.style.display = 'none';
         renderAllPages();
       } else {
         renderCurrentPage();
@@ -2214,7 +2234,7 @@
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, actualW, actualH);
 
-      const scale = actualW / targetPdfWidth;
+      const scale = actualW / pageSizeOf(pageInfo)[0];
 
       if (pageInfo.type === '編集後記') {
         // スクロール一覧: 画像はオーバーレイでパワポ風に操作
@@ -2302,13 +2322,14 @@
       const availH = Math.max(300, rawH - (isMobile ? 8 : 16));
 
       // スマホでは画面幅基準で読みやすく表示、PCでは画面全体に収める
+      const [pageW, pageH] = pageSizeOf(pageInfo);
       const fitScale = isMobile
-        ? (availW / targetPdfWidth)
-        : Math.min(availW / targetPdfWidth, availH / targetPdfHeight);
+        ? (availW / pageW)
+        : Math.min(availW / pageW, availH / pageH);
 
       const displayScale = fitScale * userZoomFactor;
-      const cssW = Math.floor(targetPdfWidth * displayScale);
-      const cssH = Math.floor(targetPdfHeight * displayScale);
+      const cssW = Math.floor(pageW * displayScale);
+      const cssH = Math.floor(pageH * displayScale);
 
       // 黒塗り個別ページ用解像度（Retina 2.0倍）
       const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
@@ -2576,19 +2597,19 @@
       const rawW = (viewportDiv && viewportDiv.clientWidth > 50) ? viewportDiv.clientWidth : window.innerWidth;
       const rawH = (viewportDiv && viewportDiv.clientHeight > 50) ? viewportDiv.clientHeight : window.innerHeight;
 
-      let cssW, cssH;
-      if (isMobile) {
-        // スマホ表示: 画面横幅を基準（100% = 画面幅ぴったり）
-        const padding = 12;
-        const availW = Math.max(280, rawW - padding);
-        const fitScale = (availW / targetPdfWidth) * userZoomFactor;
-        cssW = Math.floor(targetPdfWidth * fitScale);
-        cssH = Math.floor(targetPdfHeight * fitScale);
-      } else {
+      // ページごとの表示サイズ（縦横が混ざるときは、横長のページだけ横に広がる）
+      const cssSizeFor = (pageInfo) => {
+        const [pageW, pageH] = pageSizeOf(pageInfo);
+        if (isMobile) {
+          // スマホ表示: 画面横幅を基準（100% = 画面幅ぴったり）
+          const padding = 12;
+          const availW = Math.max(280, rawW - padding);
+          const fitScale = (availW / pageW) * userZoomFactor;
+          return [Math.floor(pageW * fitScale), Math.floor(pageH * fitScale)];
+        }
         // PC表示: A4標準（1pt = 1px: 595px × 842px）を100%基準として倍率を正しく反映
-        cssW = Math.floor(targetPdfWidth * userZoomFactor);
-        cssH = Math.floor(targetPdfHeight * userZoomFactor);
-      }
+        return [Math.floor(pageW * userZoomFactor), Math.floor(pageH * userZoomFactor)];
+      };
 
       // ★ スクロール一覧でも文字がくっきり読める高精細Retina解像度！
       const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
@@ -2599,6 +2620,7 @@
 
       // 1. 各ページのプレースホルダー枠を一括生成（軽量）
       combinedPages.forEach((pageInfo, pIdx) => {
+        const [cssW, cssH] = cssSizeFor(pageInfo);
         const pageCard = document.createElement('div');
         pageCard.id = `page-card-${pIdx}`;
         pageCard.className = 'page-scroll-card';
@@ -2635,6 +2657,7 @@
           const pIdx = parseInt(card.dataset.pageIndex, 10);
           const slot = card.querySelector('.canvas-slot');
           if (!slot) return;
+          const [cssW, cssH] = cssSizeFor(combinedPages[pIdx]);
 
           if (entry.isIntersecting) {
             // 画面内に入った -> Canvasを生成して高精細描画
@@ -2771,7 +2794,7 @@
         if (w < 6 || h < 6) return;
 
         // CSSピクセルからPDFポイント座標へ正確に変換
-        const scale = rect.width / targetPdfWidth;
+        const scale = rect.width / pageSizeOf(combinedPages[pIdx])[0];
         const pdfX = minX / scale;
         const pdfY = minY / scale;
         const pdfW = w / scale;
@@ -2836,9 +2859,10 @@
             const rawW = (viewportDiv && viewportDiv.clientWidth > 50) ? viewportDiv.clientWidth : window.innerWidth;
             const padding = isMobile ? 8 : 20;
             const availW = Math.max(280, rawW - padding);
-            const fitScale = (availW / targetPdfWidth) * userZoomFactor;
-            const cssW = Math.floor(targetPdfWidth * fitScale);
-            const cssH = Math.floor(targetPdfHeight * fitScale);
+            const [pageW, pageH] = pageSizeOf(combinedPages[newestPage]);
+            const fitScale = (availW / pageW) * userZoomFactor;
+            const cssW = Math.floor(pageW * fitScale);
+            const cssH = Math.floor(pageH * fitScale);
             const dpr = Math.min(2.0, Math.max(1.5, window.devicePixelRatio || 2.0));
             renderPageContent(combinedPages[newestPage], newestPage, canvas, cssW, cssH, dpr);
           }
@@ -2886,7 +2910,6 @@
       try {
         const { PDFDocument, rgb } = PDFLib;
         const outDoc = await PDFDocument.create();
-        const [targetW, targetH] = getSelectedPaperSize();
 
         // 1. 各PDFファイルごとに必要なページインデックスをグループ化
         // （同じPDFを200〜300回読み直すメモリ浪費を完全防止！）
@@ -2928,6 +2951,7 @@
         // 3. 全ページを順番に出力ドキュメントへ配置
         for (let pIdx = 0; pIdx < total; pIdx++) {
           const pageInfo = combinedPages[pIdx];
+          const [targetW, targetH] = pageSizeOf(pageInfo);
           const newPage = outDoc.addPage([targetW, targetH]);
 
           if (pageInfo.type === '編集後記') {
