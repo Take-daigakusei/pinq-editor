@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f6fed"/>
+      <stop offset="1" stop-color="#1b3f9c"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#fff6d6"/>
+      <stop offset="0.45" stop-color="#ffb938"/>
+      <stop offset="1" stop-color="#f07b00"/>
+    </radialGradient>
+  </defs>
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- 紙（PDF） -->
+  <path d="M136 72h160l88 88v248a32 32 0 0 1-32 32H136a32 32 0 0 1-32-32V104a32 32 0 0 1 32-32z" fill="#ffffff"/>
+  <path d="M296 72v56a32 32 0 0 0 32 32h56z" fill="#cfd8ef"/>
+  <!-- 文字行 -->
+  <rect x="140" y="196" width="150" height="14" rx="7" fill="#9fb3e6"/>
+  <rect x="140" y="232" width="200" height="14" rx="7" fill="#c6d2f0"/>
+  <rect x="140" y="268" width="120" height="14" rx="7" fill="#c6d2f0"/>
+  <!-- ぴん球 -->
+  <circle cx="338" cy="344" r="92" fill="url(#ball)"/>
+  <circle cx="338" cy="344" r="92" fill="none" stroke="#c75f00" stroke-width="6"/>
+  <ellipse cx="305" cy="308" rx="26" ry="16" fill="#ffffff" opacity="0.55" transform="rotate(-35 305 308)"/>
+  <!-- 球の中の「ぴ」 -->
+  <text x="338" y="376" font-family="'Yu Gothic','Meiryo','Hiragino Sans',sans-serif" font-size="96" font-weight="800" text-anchor="middle" fill="#ffffff">ぴ</text>
+</svg>
