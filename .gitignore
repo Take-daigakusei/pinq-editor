@@ -7,3 +7,8 @@ __pycache__/
 appsscript.json
 コード.js
 *.bat
+
+# 名前などの個人情報を含む（コミットしない）
+*.xlsx
+*.csv
+ぴん球_取り込み用.json
