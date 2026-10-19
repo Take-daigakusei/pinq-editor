@@ -754,8 +754,8 @@
     #wr-root .chip b { font-weight:700; }
     #wr-root details.menu summary { list-style:none; cursor:pointer; padding:8px 12px; border:1px solid var(--wr-line); border-radius:8px; background:var(--wr-card); user-select:none; white-space:nowrap; }
     #wr-root details.menu summary::-webkit-details-marker { display:none; }
-    #wr-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10001; }
-    #wr-root .menu-body { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:min(480px,100%); z-index:10002; background:var(--wr-card); border:1px solid var(--wr-line); border-radius:14px 14px 0 0; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); display:grid; gap:2px; box-shadow:0 -6px 24px rgba(0,0,0,.35); }
+    #wr-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:5; }
+    #wr-root .menu-body { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:min(480px,100%); z-index:6; background:var(--wr-card); border:1px solid var(--wr-line); border-radius:14px 14px 0 0; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); display:grid; gap:2px; box-shadow:0 -6px 24px rgba(0,0,0,.35); }
     #wr-root .menu-body button { text-align:left; border:0; background:transparent; padding:14px 12px; }
     #wr-root .menu-body button:hover { background:var(--wr-bg); }
     #wr-root .tablewrap { flex:1; min-height:0; overflow:auto; background:var(--wr-card); border:1px solid var(--wr-line); border-radius:10px; }
@@ -786,7 +786,7 @@
     #wr-root .grid th:first-child, #wr-root .grid td:first-child { position:sticky; left:0; background:var(--wr-card); z-index:1; }
     #wr-root .grid thead th:first-child { z-index:3; background:var(--wr-bg); cursor:default; }
     #wr-root .grid tr.off td { color:var(--wr-muted); }
-    #wr-root dialog { border:1px solid var(--wr-line); border-radius:12px; background:var(--wr-card); color:var(--wr-text); padding:18px; width:min(420px,92vw); font:15px/1.5 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; }
+    #wr-root dialog { margin:auto; border:1px solid var(--wr-line); border-radius:12px; background:var(--wr-card); color:var(--wr-text); padding:18px; width:min(420px,92vw); font:15px/1.5 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; }
     #wr-root dialog::backdrop { background:rgba(0,0,0,.45); }
     #wr-root dialog .row { display:grid; gap:4px; margin-bottom:10px; }
     #wr-root dialog .row label { font-size:.82rem; color:var(--wr-muted); }
@@ -3277,6 +3277,7 @@
 
   <!-- 執筆依頼管理（会費管理の画面構成に合わせる） -->
   <div id="wr-root">
+    <div id="wr-backdrop"></div>
     <div class="wr-wrap">
       <div class="top">
         <h1>執筆依頼</h1>
@@ -3357,7 +3358,7 @@
       </form>
     </dialog>
   </div>
-  <div id="wr-backdrop"></div>
+
   <div id="wr-toast" role="status" aria-live="polite"></div>
 
   <script>
