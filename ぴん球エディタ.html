@@ -732,6 +732,73 @@
         font-size: 0.88rem;
       }
     }
+
+    /* ===== 執筆依頼管理（会費管理 dues.html の配色・部品に合わせる） ===== */
+    .wr-open-btn { background:#334155; color:#f8fafc; border:1px solid #64748b; border-radius:8px; padding:5px 10px; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+    #wr-root { --wr-bg:#f6f7f9; --wr-card:#fff; --wr-text:#1c2430; --wr-muted:#667085; --wr-line:#e3e7ee; --wr-accent:#2563eb; --wr-warn:#b45309; --wr-bad:#c62828; --wr-good:#15803d;
+      display:none; position:fixed; inset:0; z-index:10000; background:var(--wr-bg); color:var(--wr-text); font:15px/1.5 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      #wr-root { --wr-bg:#14171c; --wr-card:#1d2128; --wr-text:#e8ecf2; --wr-muted:#99a3b3; --wr-line:#2c333d; --wr-accent:#6ea0ff; --wr-warn:#f0a040; --wr-bad:#ff7b72; --wr-good:#56d364; }
+    }
+    #wr-root * { box-sizing:border-box; }
+    #wr-root .wr-wrap { height:100%; height:100dvh; display:flex; flex-direction:column; gap:8px; max-width:900px; margin:0 auto; padding:10px 12px; }
+    #wr-root h1 { font-size:1.05rem; margin:0; }
+    #wr-root input[type=search], #wr-root input[type=text], #wr-root input[type=number], #wr-root textarea, #wr-root select { padding:8px 10px; border:1px solid var(--wr-line); border-radius:8px; background:var(--wr-card); color:var(--wr-text); font:inherit; min-width:0; max-width:100%; }
+    #wr-root button { padding:8px 12px; border:1px solid var(--wr-line); border-radius:8px; background:var(--wr-card); color:var(--wr-text); font:inherit; cursor:pointer; }
+    #wr-root button.primary { background:var(--wr-accent); border-color:var(--wr-accent); color:#fff; font-weight:600; }
+    #wr-root button:disabled { opacity:.5; cursor:default; }
+    #wr-root label.chk { display:flex; gap:6px; align-items:center; color:var(--wr-muted); font-size:.85rem; white-space:nowrap; }
+    #wr-root .top { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    #wr-root .top .q { flex:1 1 140px; }
+    #wr-root .chip { background:var(--wr-card); border:1px solid var(--wr-line); border-radius:99px; padding:3px 10px; font-size:.85rem; white-space:nowrap; font-variant-numeric:tabular-nums; }
+    #wr-root .chip b { font-weight:700; }
+    #wr-root details.menu summary { list-style:none; cursor:pointer; padding:8px 12px; border:1px solid var(--wr-line); border-radius:8px; background:var(--wr-card); user-select:none; white-space:nowrap; }
+    #wr-root details.menu summary::-webkit-details-marker { display:none; }
+    #wr-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10001; }
+    #wr-root .menu-body { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:min(480px,100%); z-index:10002; background:var(--wr-card); border:1px solid var(--wr-line); border-radius:14px 14px 0 0; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); display:grid; gap:2px; box-shadow:0 -6px 24px rgba(0,0,0,.35); }
+    #wr-root .menu-body button { text-align:left; border:0; background:transparent; padding:14px 12px; }
+    #wr-root .menu-body button:hover { background:var(--wr-bg); }
+    #wr-root .tablewrap { flex:1; min-height:0; overflow:auto; background:var(--wr-card); border:1px solid var(--wr-line); border-radius:10px; }
+    #wr-root table { width:100%; border-collapse:collapse; }
+    #wr-root thead th { position:sticky; top:0; background:var(--wr-bg); z-index:2; font-size:.78rem; color:var(--wr-muted); font-weight:600; padding:7px 10px; border-bottom:1px solid var(--wr-line); text-align:right; white-space:nowrap; }
+    #wr-root th:first-child, #wr-root td:first-child { text-align:left; }
+    #wr-root td { padding:10px; border-bottom:1px solid var(--wr-line); vertical-align:middle; font-variant-numeric:tabular-nums; }
+    #wr-root td.nm { font-weight:600; }
+    #wr-root td .small { display:block; color:var(--wr-muted); font-size:.74rem; font-weight:400; }
+    #wr-root td.amt { text-align:right; white-space:nowrap; font-weight:700; }
+    #wr-root td.act { text-align:right; white-space:nowrap; width:1%; }
+    #wr-root button.pay { background:var(--wr-accent); border-color:var(--wr-accent); color:#fff; font-weight:700; padding:10px 14px; }
+    #wr-root button.more { margin-left:6px; padding:10px 10px; font-size:.82rem; color:var(--wr-muted); }
+    #wr-root tr.ng td { opacity:.6; }
+    #wr-root tr.done td.nm { color:var(--wr-good); }
+    #wr-root .bal-pos { color:var(--wr-bad); }
+    #wr-root .bal-zero { color:var(--wr-muted); }
+    #wr-root .bal-neg { color:var(--wr-good); }
+    #wr-root .tag { display:inline-block; padding:0 7px; border-radius:99px; font-size:.7rem; border:1px solid var(--wr-accent); color:var(--wr-accent); font-weight:600; vertical-align:middle; }
+    #wr-root .tag.warn { border-color:var(--wr-warn); color:var(--wr-warn); }
+    #wr-root .tag.good { border-color:var(--wr-good); color:var(--wr-good); }
+    #wr-root .empty { text-align:center; color:var(--wr-muted); padding:22px; }
+    #wr-root #wr-foot { color:var(--wr-muted); font-size:.74rem; }
+    #wr-root .grid th.sel { background:var(--wr-warn); color:#1a1a1a; }
+    #wr-root .grid td.on { background:rgba(37,99,235,.14); color:var(--wr-accent); font-weight:800; text-align:center; cursor:pointer; }
+    #wr-root .grid td.cell { text-align:center; cursor:pointer; min-width:48px; max-width:11em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #wr-root .grid th { cursor:pointer; }
+    #wr-root .grid th:first-child, #wr-root .grid td:first-child { position:sticky; left:0; background:var(--wr-card); z-index:1; }
+    #wr-root .grid thead th:first-child { z-index:3; background:var(--wr-bg); cursor:default; }
+    #wr-root .grid tr.off td { color:var(--wr-muted); }
+    #wr-root dialog { border:1px solid var(--wr-line); border-radius:12px; background:var(--wr-card); color:var(--wr-text); padding:18px; width:min(420px,92vw); font:15px/1.5 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; }
+    #wr-root dialog::backdrop { background:rgba(0,0,0,.45); }
+    #wr-root dialog .row { display:grid; gap:4px; margin-bottom:10px; }
+    #wr-root dialog .row label { font-size:.82rem; color:var(--wr-muted); }
+    #wr-root dialog .row input, #wr-root dialog .row textarea { width:100%; }
+    #wr-root dialog h3 { margin:0 0 10px; font-size:1rem; }
+    #wr-root .members { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; max-height:34vh; overflow:auto; }
+    #wr-root .mchip { display:inline-flex; align-items:center; gap:2px; border:1px solid var(--wr-line); border-radius:99px; padding:2px 2px 2px 10px; font-size:.85rem; }
+    #wr-root .mchip.off { color:var(--wr-muted); }
+    #wr-root .mchip button { border:0; background:transparent; padding:4px 8px; font-size:.78rem; color:var(--wr-muted); }
+    #wr-toast { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); display:none; gap:12px; align-items:center; background:#1c2430; color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.35); max-width:92vw; z-index:10003; }
+    #wr-toast button { background:transparent; color:#9db8ff; border:1px solid #9db8ff; border-radius:8px; padding:5px 10px; white-space:nowrap; font:inherit; cursor:pointer; }
+    @media (max-width:520px) { #wr-root td { padding:9px 8px; } #wr-root button.pay { padding:10px 12px; } #wr-root .top h1 { display:none; } #wr-root td .small { display:none; } }
   </style>
 </head>
 <body>
@@ -742,6 +809,7 @@
       <span>ぴん球 PDFエディタ</span>
       <span class="badge">高精細表示対応</span>
     </h1>
+    <button type="button" class="wr-open-btn" onclick="openWriterManager()">✍️ 執筆依頼管理</button>
   </header>
 
   <div class="mobile-tab-bar">
@@ -3205,6 +3273,388 @@
         updateZoomDisplay();
       }
     });
+  </script>
+
+  <!-- 執筆依頼管理（会費管理の画面構成に合わせる） -->
+  <div id="wr-root">
+    <div class="wr-wrap">
+      <div class="top">
+        <h1>執筆依頼</h1>
+        <select id="wr-issue" onchange="wrSelectIssue(this.value)" aria-label="対象の号" title="どの号の執筆者を決めるか"></select>
+        <select id="wr-slot" onchange="wrSetSlot(this.value)" aria-label="いま決める枠" title="いま依頼する枠（表紙・裏表紙・本文）"></select>
+        <input type="search" id="wr-q" class="q" placeholder="名前で探す" oninput="wrRender()" autocomplete="off">
+        <span class="chip" id="wr-chip">決定 <b id="wr-c-done">-</b>/<span id="wr-c-total">-</span> ・ 候補 <b id="wr-c-cand">-</b></span>
+        <label class="chk" id="wr-only-wrap"><input type="checkbox" id="wr-only" checked onchange="wrRender()"> 候補だけ</label>
+        <select id="wr-view" onchange="wrSetView(this.value)" aria-label="表示" title="表示の切り替え">
+          <option value="cand">依頼候補</option>
+          <option value="grid">履歴（号×メンバー）</option>
+        </select>
+        <details class="menu" id="wr-menu">
+          <summary>メニュー</summary>
+          <div class="menu-body">
+            <button onclick="wrOpenIssue()">号を追加</button>
+            <button onclick="wrRemoveSelectedIssue()">選んでいる号を削除</button>
+            <button onclick="wrOpenMembers()">メンバーの追加・休み・削除</button>
+            <button onclick="wrOpenSettings()">詳細設定（直近を避ける号数）</button>
+            <button onclick="wrExport()">書き出し（JSON）</button>
+            <button onclick="wrMenuClose(); document.getElementById('wrImportInput').click()">読み込み（JSON）</button>
+            <button onclick="wrClose()">閉じる</button>
+          </div>
+        </details>
+        <input type="file" id="wrImportInput" accept=".json,application/json" style="display:none" onchange="wrImport(this.files[0]); this.value='';">
+      </div>
+      <div class="tablewrap">
+        <table id="wr-table"></table>
+      </div>
+      <div id="wr-foot"></div>
+    </div>
+
+    <dialog id="wr-issue-dlg">
+      <form method="dialog" onsubmit="return wrIssueSave(event)">
+        <h3>号を追加</h3>
+        <div class="row"><label>号の名前（例: 2026年11月号）</label><input type="text" id="wr-issue-name" maxlength="30" autocomplete="off"></div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" onclick="document.getElementById('wr-issue-dlg').close()">やめる</button>
+          <button type="submit" class="primary">追加</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="wr-member-dlg">
+      <h3>メンバー</h3>
+      <div class="members" id="wr-members"></div>
+      <form method="dialog" onsubmit="return wrMembersAdd(event)">
+        <div class="row"><label>追加する名前（複数は改行かカンマで区切る）</label><textarea id="wr-member-names" rows="3" placeholder="例: 山田, 佐藤"></textarea></div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" onclick="document.getElementById('wr-member-dlg').close()">閉じる</button>
+          <button type="submit" class="primary">追加</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="wr-set-dlg">
+      <form method="dialog" onsubmit="return wrSettingsSave(event)">
+        <h3>詳細設定</h3>
+        <div class="row"><label>1号あたりの人数と、同じ枠で直近に書いた人を避ける号数</label>
+          <div id="wr-slot-inputs" style="display:flex; gap:12px; flex-wrap:wrap;"></div>
+        </div>
+        <div style="color:var(--wr-muted); font-size:.78rem; margin-bottom:12px;">同じ枠（例: 本文）の履歴だけを見ます。表紙を書いた人でも、本文は続けて依頼できます。避ける号数以内に同じ枠を書いた人は、候補の下に回して「直近」と表示します。データはこのブラウザ内にだけ保存されます（「全データ初期化」の対象外）。ほかのPCと共有するときは、メニューの書き出し・読み込みを使います。</div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" onclick="document.getElementById('wr-set-dlg').close()">やめる</button>
+          <button type="submit" class="primary">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="wr-topic-dlg">
+      <form method="dialog" onsubmit="return wrTopicSave(event)">
+        <h3 id="wr-topic-title">題材</h3>
+        <div class="row"><label>何を書いてもらうか（例: 幹事紹介、思い出Ⅱ）。決まっていなければ空のままで</label><input type="text" id="wr-topic" maxlength="60" autocomplete="off"></div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" onclick="document.getElementById('wr-topic-dlg').close()">あとで</button>
+          <button type="submit" class="primary">保存</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+  <div id="wr-backdrop"></div>
+  <div id="wr-toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ===== 執筆依頼管理 =====
+    // データ: { members:[{id,name,active}], issues:[{id,label,writers:[{m:memberId,s:slotId}]}], slots:[{id,label,n}], gap, sel, view, slot }
+    // 1号の依頼は枠（表紙・裏表紙・本文）に分ける。初期は表紙1・裏表紙1・本文3（計5人）
+    const WR_KEY = 'pinq_writer_mgr_v1';
+    const WR_SLOTS = [{ id: 'cover', label: '表紙', n: 1, gap: 2 }, { id: 'back', label: '裏表紙', n: 1, gap: 2 }, { id: 'body', label: '本文', n: 3, gap: 2, topic: true }];
+    let wrData = { members: [], issues: [], gap: 2, sel: null, view: 'cand', slots: WR_SLOTS.map(s => Object.assign({}, s)), slot: 'cover' };
+    let wrToastTimer = null;
+    const $wr = id => document.getElementById(id);
+
+    function wrLoad() {
+      try {
+        const d = JSON.parse(localStorage.getItem(WR_KEY) || 'null');
+        if (d && Array.isArray(d.members) && Array.isArray(d.issues)) wrData = wrNormalize(d);
+      } catch (e) {}
+    }
+    // 読み込んだデータを整える（枠がない古いデータは、全員を「本文」として引き継ぐ）
+    function wrNormalize(d) {
+      const o = Object.assign({ gap: 2, sel: null, view: 'cand', slot: 'cover' }, d);
+      if (!Array.isArray(o.slots) || !o.slots.length) o.slots = WR_SLOTS.map(s => Object.assign({}, s));
+      o.slots = o.slots.map(s => Object.assign({ gap: o.gap, topic: s.id === 'body' }, s));
+      o.issues = o.issues.map(i => Object.assign({}, i, { writers: (i.writers || []).map(w => typeof w === 'string' ? { m: w, s: 'body', t: '' } : Object.assign({ t: '' }, w)) }));
+      return o;
+    }
+    const wrHas = (issue, mid) => issue.writers.some(w => w.m === mid);
+    const wrHasSlot = (issue, mid, sid) => issue.writers.some(w => w.m === mid && w.s === sid);
+    const wrSlotLabel = id => { const s = wrData.slots.find(s => s.id === id); return s ? s.label : ''; };
+    const wrFilled = (issue, sid) => issue.writers.filter(w => w.s === sid).length;
+    // 次に決める枠: いま選んでいる枠が埋まっていたら、最初の空き枠へ
+    function wrNextSlot(issue) {
+      const cur = wrData.slots.find(s => s.id === wrData.slot);
+      if (cur && issue && wrFilled(issue, cur.id) < cur.n) return cur.id;
+      const open = issue && wrData.slots.find(s => wrFilled(issue, s.id) < s.n);
+      return open ? open.id : (cur ? cur.id : wrData.slots[0].id);
+    }
+    function wrSetSlot(id) { wrData.slot = id; wrSave(); wrRender(); }
+    function wrSave() { try { localStorage.setItem(WR_KEY, JSON.stringify(wrData)); } catch (e) {} }
+    function wrUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+    function wrEsc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function wrSelIssue() { return wrData.issues.find(i => i.id === wrData.sel) || wrData.issues[wrData.issues.length - 1] || null; }
+    function wrMenuClose() { $wr('wr-menu').open = false; }
+
+    function wrToast(text, undo) {
+      const t = $wr('wr-toast');
+      clearTimeout(wrToastTimer);
+      t.innerHTML = '<span>' + wrEsc(text) + '</span>' + (undo ? '<button type="button" id="wr-toast-undo">元に戻す</button>' : '');
+      t.style.display = 'flex';
+      if (undo) $wr('wr-toast-undo').onclick = () => { undo(); wrToast('元に戻しました'); };
+      wrToastTimer = setTimeout(() => { t.style.display = 'none'; }, undo ? 9000 : 3500);
+    }
+
+    function openWriterManager() {
+      wrLoad();
+      $wr('wr-root').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      wrRender();
+    }
+    function wrClose() {
+      wrMenuClose();
+      $wr('wr-root').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    // ---- 操作 ----
+    function wrSelectIssue(id) { wrData.sel = id; wrSave(); wrRender(); }
+    function wrSetView(v) { wrData.view = v; wrSave(); wrRender(); }
+    function wrSetWriter(issueId, memberId, on, slot, topic) {
+      const i = wrData.issues.find(i => i.id === issueId);
+      if (!i) return;
+      i.writers = i.writers.filter(w => w.m !== memberId);   // 1人は1つの枠だけ
+      if (on) i.writers.push({ m: memberId, s: slot || wrData.slot, t: topic || '' });
+      wrSave(); wrRender();
+    }
+    // 1人に依頼／取り消し（確認ダイアログは出さず、「元に戻す」を出す）
+    function wrAssign(issueId, memberId, on) {
+      const m = wrData.members.find(m => m.id === memberId);
+      const i = wrData.issues.find(i => i.id === issueId);
+      const prev = i && i.writers.find(w => w.m === memberId);
+      const slot = on ? wrData.slot : (prev ? prev.s : wrData.slot);
+      wrSetWriter(issueId, memberId, on, slot, on ? '' : (prev ? prev.t : ''));
+      const sd = wrData.slots.find(s => s.id === slot);
+      if (on && i) { wrData.slot = wrNextSlot(i); wrSave(); wrRender(); }
+      wrToast((on ? wrSlotLabel(slot) + 'を依頼しました: ' : '取り消しました: ') + (m ? m.name : ''), () => { wrSetWriter(issueId, memberId, !on, slot, on ? '' : (prev ? prev.t : '')); wrRender(); });
+      if (on && sd && sd.topic) wrOpenTopic(issueId, memberId);   // 本文は、何を書いてもらうかを入力
+    }
+    // 履歴表から付け外し（本文は題材も入力）
+    function wrGridToggle(issueId, memberId, on) {
+      wrSetWriter(issueId, memberId, on);
+      const sd = wrData.slots.find(s => s.id === wrData.slot);
+      if (on && sd && sd.topic) wrOpenTopic(issueId, memberId);
+    }
+    // 題材の入力（何を書いてもらうか）
+    let wrTopicTarget = null;
+    function wrOpenTopic(issueId, memberId) {
+      const i = wrData.issues.find(i => i.id === issueId);
+      const w = i && i.writers.find(w => w.m === memberId);
+      const m = wrData.members.find(m => m.id === memberId);
+      if (!w) return;
+      wrTopicTarget = { issueId, memberId };
+      $wr('wr-topic-title').textContent = (m ? m.name : '') + '：' + wrSlotLabel(w.s);
+      $wr('wr-topic').value = w.t || '';
+      $wr('wr-topic-dlg').showModal();
+      setTimeout(() => $wr('wr-topic').focus(), 0);
+    }
+    function wrTopicSave(ev) {
+      ev.preventDefault();
+      const t = wrTopicTarget;
+      const i = t && wrData.issues.find(i => i.id === t.issueId);
+      const w = i && i.writers.find(w => w.m === t.memberId);
+      if (w) { w.t = $wr('wr-topic').value.trim(); wrSave(); wrRender(); }
+      $wr('wr-topic-dlg').close();
+      return false;
+    }
+    function wrOpenIssue() { wrMenuClose(); $wr('wr-issue-name').value = ''; $wr('wr-issue-dlg').showModal(); }
+    function wrIssueSave(ev) {
+      ev.preventDefault();
+      const label = $wr('wr-issue-name').value.trim();
+      if (!label) return false;
+      const issue = { id: wrUid(), label, writers: [] };
+      wrData.issues.push(issue);
+      wrData.sel = issue.id;
+      wrSave(); wrRender();
+      $wr('wr-issue-dlg').close();
+      return false;
+    }
+    function wrRemoveSelectedIssue() {
+      wrMenuClose();
+      const s = wrSelIssue();
+      if (!s || !confirm('「' + s.label + '」を削除しますか？（この号の依頼の記録も消えます）')) return;
+      wrData.issues = wrData.issues.filter(i => i.id !== s.id);
+      wrData.sel = null;
+      wrSave(); wrRender();
+    }
+    function wrOpenMembers() { wrMenuClose(); $wr('wr-member-names').value = ''; wrRenderMembers(); $wr('wr-member-dlg').showModal(); }
+    function wrRenderMembers() {
+      $wr('wr-members').innerHTML = wrData.members.length ? wrData.members.map(m =>
+        '<span class="mchip ' + (m.active ? '' : 'off') + '">' + wrEsc(m.name) + (m.active ? '' : '（休）') +
+        '<button type="button" onclick="wrToggleActive(\'' + m.id + '\')">' + (m.active ? '休む' : '戻す') + '</button>' +
+        '<button type="button" onclick="wrRemoveMember(\'' + m.id + '\')">削除</button></span>').join('')
+        : '<span style="color:var(--wr-muted); font-size:.85rem;">メンバーがいません。下から追加してください。</span>';
+    }
+    function wrMembersAdd(ev) {
+      ev.preventDefault();
+      const names = $wr('wr-member-names').value.split(/[\n,、，]+/).map(s => s.trim()).filter(Boolean);
+      let n = 0;
+      names.forEach(name => { if (!wrData.members.some(m => m.name === name)) { wrData.members.push({ id: wrUid(), name, active: true }); n++; } });
+      $wr('wr-member-names').value = '';
+      wrSave(); wrRender(); wrRenderMembers();
+      wrToast(n + '人を追加しました' + (names.length > n ? '（同じ名前の' + (names.length - n) + '人は除く）' : ''));
+      return false;
+    }
+    function wrToggleActive(id) {
+      const m = wrData.members.find(m => m.id === id);
+      if (m) { m.active = !m.active; wrSave(); wrRender(); wrRenderMembers(); }
+    }
+    function wrRemoveMember(id) {
+      const m = wrData.members.find(m => m.id === id);
+      if (!m || !confirm('「' + m.name + '」を削除しますか？履歴からも消えます。\n（一時的に外すだけなら「休む」を使ってください）')) return;
+      wrData.members = wrData.members.filter(x => x.id !== id);
+      wrData.issues.forEach(i => { i.writers = i.writers.filter(w => w.m !== id); });
+      wrSave(); wrRender(); wrRenderMembers();
+    }
+    function wrOpenSettings() {
+      wrMenuClose();
+      $wr('wr-slot-inputs').innerHTML = wrData.slots.map(s =>
+        '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; width:100%;"><b style="min-width:4.5em;">' + wrEsc(s.label) + '</b>' +
+        '<input type="number" data-slot="' + s.id + '" data-f="n" min="0" max="20" value="' + s.n + '" inputmode="numeric" style="width:4.5em">人' +
+        '<span style="color:var(--wr-muted);">／直近</span><input type="number" data-slot="' + s.id + '" data-f="gap" min="0" max="20" value="' + s.gap + '" inputmode="numeric" style="width:4.5em">号は避ける</div>').join('');
+      $wr('wr-set-dlg').showModal();
+    }
+    function wrSettingsSave(ev) {
+      ev.preventDefault();
+      document.querySelectorAll('#wr-slot-inputs input').forEach(inp => {
+        const s = wrData.slots.find(s => s.id === inp.dataset.slot);
+        if (s) s[inp.dataset.f] = Math.max(0, Math.min(20, parseInt(inp.value, 10) || 0));
+      });
+      wrSave(); wrRender();
+      $wr('wr-set-dlg').close();
+      return false;
+    }
+
+    // ---- 依頼候補: 選んでいる号より前の履歴をもとに並べる ----
+    function wrCandidates() {
+      const sel = wrSelIssue();
+      if (!sel) return [];
+      const idx = wrData.issues.findIndex(i => i.id === sel.id);
+      const past = wrData.issues.slice(0, idx);
+      const slotId = wrData.slot;
+      const slotDef = wrData.slots.find(s => s.id === slotId) || {};
+      const gap = slotDef.gap == null ? wrData.gap : slotDef.gap;
+      return wrData.members.filter(m => m.active).map(m => {
+        const count = past.filter(i => wrHasSlot(i, m.id, slotId)).length;
+        let last = -1;
+        past.forEach((i, k) => { if (wrHasSlot(i, m.id, slotId)) last = k; });
+        const ago = last < 0 ? Infinity : past.length - last;   // 何号前に書いたか
+        const done = wrHas(sel, m.id);
+        const recent = ago <= gap;
+        return { m, count, ago, done, recent, ng: done || recent, slot: done ? sel.writers.find(w => w.m === m.id).s : null, topic: done ? (sel.writers.find(w => w.m === m.id).t || '') : '',
+          other: wrData.slots.filter(s => s.id !== slotId).map(s => ({ label: s.label, n: past.filter(i => wrHasSlot(i, m.id, s.id)).length })).filter(o => o.n) };
+      }).sort((a, b) => (a.done - b.done) || (a.recent - b.recent) || (a.count - b.count) || (b.ago - a.ago) || a.m.name.localeCompare(b.m.name, 'ja'));
+    }
+
+    function wrRender() {
+      if ($wr('wr-root').style.display === 'none') return;
+      const sel = wrSelIssue();
+      const ms = wrData.members, is = wrData.issues;
+      const q = $wr('wr-q').value.trim();
+      $wr('wr-view').value = wrData.view;
+      $wr('wr-only-wrap').style.display = wrData.view === 'cand' ? '' : 'none';
+      $wr('wr-issue').innerHTML = is.length ? is.slice().reverse().map(i =>
+        '<option value="' + i.id + '"' + (sel && sel.id === i.id ? ' selected' : '') + '>' + wrEsc(i.label) + '</option>').join('') : '<option>（号がありません）</option>';
+
+      const cands = wrCandidates();
+      $wr('wr-c-done').textContent = sel ? sel.writers.length : '-';
+      $wr('wr-c-total').textContent = wrData.slots.reduce((a, s) => a + s.n, 0);
+      if (sel) wrData.slot = wrNextSlot(sel);
+      $wr('wr-slot').innerHTML = wrData.slots.map(s =>
+        '<option value="' + s.id + '"' + (s.id === wrData.slot ? ' selected' : '') + '>' + wrEsc(s.label) + (sel ? ' ' + wrFilled(sel, s.id) + '/' + s.n : '') + '</option>').join('');
+      $wr('wr-c-cand').textContent = sel ? cands.filter(c => !c.ng).length : '-';
+      let h = '';
+      if (wrData.view === 'cand') {
+        h = '<thead><tr><th>名前</th><th>' + wrEsc(wrSlotLabel(wrData.slot)) + 'の累計</th><th></th></tr></thead><tbody>';
+        const onlyCand = $wr('wr-only').checked;
+        const rows = cands.filter(c => (!q || c.m.name.includes(q)) && (!onlyCand || !c.ng || c.done));
+        h += rows.map(c => {
+          const why = wrSlotLabel(wrData.slot) + ': ' + (c.ago === Infinity ? '歴なし' : c.ago + '号前') + (c.other.length ? '　（' + c.other.map(o => o.label + o.n + '回').join('・') + '）' : '');
+          const tag = c.done ? ' <span class="tag good">' + wrEsc(wrSlotLabel(c.slot)) + '</span>' + (c.topic ? ' <span style="font-weight:400; color:var(--wr-muted); font-size:.85rem;">「' + wrEsc(c.topic) + '」</span>' : '') : (c.recent ? ' <span class="tag warn">直近</span>' : '');
+          const btn = c.done
+            ? ((wrData.slots.find(s => s.id === c.slot) || {}).topic ? '<button type="button" class="more" onclick="wrOpenTopic(\'' + sel.id + '\',\'' + c.m.id + '\')">題材</button>' : '') + '<button type="button" class="more" onclick="wrAssign(\'' + sel.id + '\',\'' + c.m.id + '\',false)">取り消す</button>'
+            : '<button type="button" class="pay" onclick="wrAssign(\'' + sel.id + '\',\'' + c.m.id + '\',true)">' + wrEsc(wrSlotLabel(wrData.slot)) + 'を依頼</button>';
+          return '<tr class="' + (c.done ? 'done' : (c.ng ? 'ng' : '')) + '"><td class="nm">' + wrEsc(c.m.name) + tag + '<span class="small">' + wrEsc(why) + '</span></td>' +
+            '<td class="amt ' + (c.count ? '' : 'bal-zero') + '">' + c.count + '回</td><td class="act">' + btn + '</td></tr>';
+        }).join('');
+        if (!rows.length) h += '<tr><td colspan="3" class="empty">' + (!is.length ? '右上のメニューから号を追加してください' : (!ms.length ? 'メニューからメンバーを追加してください' : '該当する人がいません。「候補だけ」を外すと全員を表示します')) + '</td></tr>';
+        h += '</tbody>';
+      } else {
+        const desc = is.slice().reverse();
+        h = '<thead><tr><th>名前</th>' + desc.map(i => '<th class="' + (sel && sel.id === i.id ? 'sel' : '') + '" onclick="wrSelectIssue(\'' + i.id + '\')">' + wrEsc(i.label) + '</th>').join('') + '<th>計</th></tr></thead><tbody>';
+        const rows = ms.filter(m => !q || m.name.includes(q));
+        h += rows.map(m => {
+          const total = is.filter(i => wrHas(i, m.id)).length;
+          return '<tr class="' + (m.active ? '' : 'off') + '"><td class="nm">' + wrEsc(m.name) + (m.active ? '' : '（休）') + '</td>' +
+            desc.map(i => { const w = i.writers.find(w => w.m === m.id); return '<td class="cell ' + (w ? 'on' : '') + '" title="' + (w ? wrEsc(wrSlotLabel(w.s) + (w.t ? '：' + w.t : '')) : '') + '" onclick="wrGridToggle(\'' + i.id + '\',\'' + m.id + '\',' + (!w) + ')">' + (w ? wrEsc(wrSlotLabel(w.s).slice(0, 1)) + (w.t ? ' ' + wrEsc(w.t) : '') : '') + '</td>'; }).join('') +
+            '<td class="amt">' + total + '</td></tr>';
+        }).join('');
+        if (!rows.length) h += '<tr><td colspan="' + (is.length + 2) + '" class="empty">メニューからメンバーを追加してください</td></tr>';
+        h += '</tbody>';
+      }
+      const tb = $wr('wr-table');
+      tb.className = wrData.view === 'grid' ? 'grid' : '';
+      tb.innerHTML = h;
+      $wr('wr-foot').textContent = wrData.view === 'cand'
+        ? '「' + wrSlotLabel(wrData.slot) + '」の履歴だけで、回数が少なく間が空いている順に並べています。同じ枠で直近' + ((wrData.slots.find(s => s.id === wrData.slot) || {}).gap) + '号に書いた人は下に回します。'
+        : '表＝表紙・裏＝裏表紙・本＝本文（本文は題材つき）。セルをタップで付け外し（付けるときは、上で選んでいる枠）。号の見出しをタップすると、その号が依頼の対象になります。';
+    }
+
+    function wrExport() {
+      wrMenuClose();
+      const blob = new Blob([JSON.stringify(wrData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      const d = new Date(), p = n => String(n).padStart(2, '0');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ぴん球_執筆依頼_' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '.json';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    function wrImport(file) {
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const d = JSON.parse(r.result);
+          if (!Array.isArray(d.members) || !Array.isArray(d.issues)) throw new Error('形式が違います');
+          if (!confirm('現在のデータを、読み込んだデータで置き換えます。よろしいですか？')) return;
+          wrData = wrNormalize(d);
+          wrSave(); wrRender();
+          wrToast('読み込みました');
+        } catch (e) { wrToast('読み込めませんでした: ' + e.message); }
+      };
+      r.readAsText(file);
+    }
+
+    // メニュー: 開いたら暗くして、外をタップすると閉じる。Esc でも閉じる
+    (function () {
+      const menu = $wr('wr-menu'), back = $wr('wr-backdrop');
+      menu.addEventListener('toggle', () => { back.style.display = menu.open ? 'block' : 'none'; });
+      document.addEventListener('click', ev => {
+        if (menu.open && !ev.target.closest('#wr-menu .menu-body') && !ev.target.closest('#wr-menu summary')) { menu.open = false; ev.preventDefault(); ev.stopPropagation(); }
+      }, true);
+      document.addEventListener('keydown', ev => {
+        if (ev.key !== 'Escape') return;
+        if (menu.open) menu.open = false;
+        else if ($wr('wr-root').style.display === 'block' && !document.querySelector('#wr-root dialog[open]')) wrClose();
+      });
+    })();
   </script>
 </body>
 </html>
