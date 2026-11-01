@@ -2223,7 +2223,7 @@
         const canvasContainer = document.getElementById('canvasContainer');
         allPagesContainer.style.display = 'flex';
         if (canvasContainer) canvasContainer.style.display = 'none';
-        renderAllPages();
+        renderAllPages(currentPageIndex);   // 順番を変えても、見ていたページ番号の位置にとどまる
       } else {
         renderCurrentPage();
       }
