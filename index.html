@@ -221,7 +221,7 @@
       flex-direction: column;
       gap: 6px;
       margin-top: 8px;
-      max-height: 180px;
+      max-height: 260px;
       overflow-y: auto;
     }
     .body-item {
@@ -733,6 +733,51 @@
       }
     }
 
+
+    /* ===== 目次・並び替え・PDFツール ===== */
+    .tool-open-btn { background:#0f766e; color:#f0fdfa; border:1px solid #5eead4; border-radius:8px; padding:5px 10px; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+    .header-actions { display:flex; gap:6px; align-items:center; }
+    .drag-handle { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; color:#94a3b8; padding:4px 8px; font-size:1rem; line-height:1; border-radius:4px; }
+    .drag-handle:active { cursor:grabbing; background:#e2e8f0; }
+    .sortable-dragging { opacity:.45; }
+    [data-dir="v"] .drop-before { box-shadow:0 -3px 0 0 var(--primary); }
+    [data-dir="v"] .drop-after { box-shadow:0 3px 0 0 var(--primary); }
+    [data-dir="h"] .drop-before { box-shadow:-4px 0 0 0 var(--primary); }
+    [data-dir="h"] .drop-after { box-shadow:4px 0 0 0 var(--primary); }
+    .sort-bar { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+    .sort-bar button { background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; font-size:0.74rem; font-weight:600; color:#334155; cursor:pointer; }
+    .tool-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; height:100dvh; background:rgba(15,23,42,.65); z-index:10050; display:flex; align-items:center; justify-content:center; padding:10px; }
+    .tool-card { background:#fff; border-radius:14px; width:100%; max-width:780px; max-height:100%; display:flex; flex-direction:column; box-shadow:0 20px 25px -5px rgba(0,0,0,.3); overflow:hidden; }
+    .tool-head { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid var(--border); font-weight:700; font-size:0.95rem; }
+    .tool-tabs { display:flex; gap:4px; padding:8px 10px 0; overflow-x:auto; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .tool-tab { background:none; border:none; border-bottom:3px solid transparent; padding:8px 12px; font-size:0.84rem; font-weight:700; color:#64748b; cursor:pointer; white-space:nowrap; }
+    .tool-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+    .tool-body { padding:12px 14px; overflow:auto; flex:1; min-height:0; font-size:0.86rem; color:#1e293b; }
+    .tool-body h4 { font-size:0.9rem; margin:0 0 6px; }
+    .tool-note { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.78rem; color:#475569; margin:8px 0; line-height:1.55; }
+    .tool-warn { background:#fffbeb; border-color:#fcd34d; color:#92400e; }
+    .tool-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+    .tool-btn { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:9px 14px; font-size:0.86rem; font-weight:700; cursor:pointer; }
+    .tool-btn.sub { background:#e2e8f0; color:#1e293b; }
+    .tool-btn.green { background:var(--success); }
+    .tool-btn:disabled { opacity:.5; cursor:default; }
+    .tool-sm { background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px 9px; font-size:0.76rem; font-weight:700; color:#334155; cursor:pointer; }
+    .tool-sm.danger { color:#b91c1c; }
+    .tool-src { background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:8px 10px; margin-bottom:10px; }
+    .tool-prog { height:8px; background:#e2e8f0; border-radius:9999px; overflow:hidden; margin:8px 0; }
+    .tool-prog > div { height:100%; width:0; background:var(--primary); transition:width .15s; }
+    .tool-item { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 0; border-bottom:1px dashed #cbd5e1; flex-wrap:wrap; }
+    .tool-item .nm { font-weight:700; word-break:break-all; }
+    .tool-item .meta { font-size:0.74rem; color:#64748b; }
+    .pg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; margin:8px 0; }
+    .pg-item { position:relative; border:2px solid #cbd5e1; border-radius:8px; background:#f8fafc; padding:4px; text-align:center; font-size:0.74rem; cursor:pointer; user-select:none; -webkit-user-select:none; }
+    .pg-item .th { background:#fff; border:1px solid #e2e8f0; min-height:70px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .pg-item canvas { max-width:100%; height:auto; display:block; }
+    .pg-item .no { font-weight:700; color:#334155; margin-top:3px; }
+    .pg-item.sel { border-color:var(--primary); background:#dbeafe; box-shadow:0 0 0 2px rgba(37,99,235,.25); }
+    .pg-item.sel .no::before { content:'✓ '; color:var(--primary); }
+    @media (max-width: 480px) { header .badge { display:none; } .tool-open-btn, .wr-open-btn { padding:5px 8px; } }
+
     /* 執筆依頼は、別のページ（共有保存つき）に移した。ここは、そこへの入口 */
     .wr-open-btn { background:#334155; color:#f8fafc; border:1px solid #64748b; border-radius:8px; padding:5px 10px; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap; text-decoration:none; display:inline-block; }
   </style>
@@ -745,7 +790,10 @@
       <span>ぴん球 PDFエディタ</span>
       <span class="badge">高精細表示対応</span>
     </h1>
-    <a class="wr-open-btn" href="https://circle-roster.web.app/pinq-writers.html" target="_blank" rel="noopener" title="執筆依頼の管理（別のページが開きます。共有保存つき）">✍️ 執筆依頼</a>
+    <div class="header-actions">
+      <button type="button" class="tool-open-btn" onclick="openTools('split')" title="PDFの分割・圧縮・完成作品のアーカイブ">🧰 ツール</button>
+      <a class="wr-open-btn" href="https://circle-roster.web.app/pinq-writers.html" target="_blank" rel="noopener" title="執筆依頼の管理（別のページが開きます。共有保存つき）">✍️ 執筆依頼</a>
+    </div>
   </header>
 
   <div class="mobile-tab-bar">
@@ -779,6 +827,14 @@
           </div>
         </div>
 
+        <!-- 1.5 目次（表紙の次に必ず入る） -->
+        <div class="section-card">
+          <div class="section-title">
+            <span>目次（表紙の次のページに入ります）</span>
+          </div>
+          <textarea class="form-textarea" id="tocText" rows="9" placeholder="1行に1項目。空の行は、そのまま空きになります。" oninput="debounceRefresh()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:0.85rem; font-family:inherit; line-height:1.5;"></textarea>
+        </div>
+
         <!-- 2. 本文 -->
         <div class="section-card">
           <div class="section-title">
@@ -790,7 +846,12 @@
             <span class="btn-select">＋ 本文を追加</span>
             <input type="file" id="bodyInput" accept="application/pdf, .pdf, image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*" multiple style="display:none" onchange="handleBodySelect(this.files)">
           </div>
-          <div class="body-list" id="bodyList"></div>
+          <div class="body-list" id="bodyList" data-dir="v"></div>
+          <div class="sort-bar" id="bodySortBar" style="display:none;">
+            <span style="font-size:0.72rem; color:#64748b; align-self:center;">「⠿」をつかんで動かすと並び替え：</span>
+            <button type="button" onclick="sortBodyBy('name')">名前順</button>
+            <button type="button" onclick="sortBodyBy('reverse')">逆順</button>
+          </div>
         </div>
 
         <!-- 3. 編集後記（見本画像準拠） -->
@@ -1008,6 +1069,12 @@
           </a>
         </div>
 
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button onclick="openToolsWithResult('compress')" class="btn btn-secondary" style="padding:9px 6px; font-size:0.8rem; color:#475569; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">🗜 サイズを小さくする</button>
+          <button onclick="openTools('archive')" class="btn btn-secondary" style="padding:9px 6px; font-size:0.8rem; color:#475569; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">📚 アーカイブを見る</button>
+        </div>
+        <div id="archiveSavedNote" style="font-size:0.74rem; color:#475569; text-align:center;"></div>
+
         <button class="btn btn-secondary" onclick="closeDownloadModal()" style="width:100%; padding:8px; font-size:0.82rem; color:#64748b; background:transparent; border:none; cursor:pointer;">✕ 閉じる（新規作成に戻る）</button>
       </div>
 
@@ -1089,7 +1156,8 @@
     // - リロードやブラウザ再起動時も選択したファイルを完全復元
     // ========================================================
     const DB_NAME = 'PinqEditorDB';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
+    const ARCHIVE_STORE = 'archive';
     const STORE_NAME = 'projectData';
 
     function openIndexedDB() {
@@ -1099,6 +1167,9 @@
           const db = e.target.result;
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             db.createObjectStore(STORE_NAME);
+          }
+          if (!db.objectStoreNames.contains(ARCHIVE_STORE)) {
+            db.createObjectStore(ARCHIVE_STORE, { keyPath: 'id', autoIncrement: true });
           }
         };
         req.onsuccess = () => resolve(req.result);
@@ -1139,6 +1210,7 @@
           afterwordDate: document.getElementById('afterwordDate')?.value || '',
           afterwordPublisher: document.getElementById('afterwordPublisher')?.value || '',
           selectedPaperSize: document.getElementById('selectPaperSize')?.value || 'A4',
+          tocText: document.getElementById('tocText')?.value || '',
           savedAt: Date.now()
         };
 
@@ -1299,7 +1371,8 @@
           if (saved.selectedPaperSize) {
             document.getElementById('selectPaperSize').value = saved.selectedPaperSize;
           }
-          if (coverFile || bodyFiles.length > 0 || backCoverFile || afterwordImages.length > 0) {
+          if (typeof saved.tocText === 'string') document.getElementById('tocText').value = saved.tocText;
+          if (coverFile || bodyFiles.length > 0 || backCoverFile || afterwordImages.length > 0 || (document.getElementById('tocText').value || '').trim()) {
             refreshPreview();
             showToast("前回の編集データを復元しました ✨", "🔄");
           }
@@ -1970,6 +2043,7 @@
         div.className = 'body-item';
         div.innerHTML = `
           <div class="body-name" title="${item.name}">
+            <span class="drag-handle" title="つかんで動かすと並び替え">⠿</span>
             <span class="body-index">${index + 1}</span>
             <span>${item.name}</span>
           </div>
@@ -1981,6 +2055,9 @@
         `;
         list.appendChild(div);
       });
+      const bar = document.getElementById('bodySortBar');
+      if (bar) bar.style.display = bodyFiles.length > 1 ? 'flex' : 'none';
+      makeSortable(list, '.body-item', '.drag-handle', moveBodyTo);
     }
     function moveBody(index, dir) {
       const newIdx = index + dir;
@@ -2092,6 +2169,8 @@
         }
       }
 
+      combinedPages.push({ type: '目次', name: '指定様式' });   // 目次は、いつも表紙の次
+
       for (let item of bodyFiles) {
         if (isImageFile(item.file)) {
           combinedPages.push({ type: '本文', file: item.file, isImage: true, name: item.name });
@@ -2125,6 +2204,8 @@
           }
         }
       }
+
+      remapRedactionsTo(combinedPages);   // 目次の追加・並び替え・削除でページの番号が動いても、黒塗りは同じページについて回る
 
       if (combinedPages.length === 0) {
         currentPageIndex = 0;
@@ -2252,6 +2333,8 @@
         await drawExactAfterword(ctx, actualW, actualH, scale, {
           includeImages: editorMode !== 'scroll'
         });
+      } else if (pageInfo.type === '目次') {
+        drawToc(ctx, actualW, actualH, scale);
       } else if (pageInfo.isImage) {
         try {
           // プレビュー用画像
@@ -2926,7 +3009,7 @@
         const filePagesMap = new Map();
         for (let pIdx = 0; pIdx < total; pIdx++) {
           const pageInfo = combinedPages[pIdx];
-          if (pageInfo.type !== '編集後記' && !pageInfo.isImage && pageInfo.file) {
+          if (pageInfo.type !== '編集後記' && pageInfo.type !== '目次' && !pageInfo.isImage && pageInfo.file) {
             if (!filePagesMap.has(pageInfo.file)) {
               filePagesMap.set(pageInfo.file, new Set());
             }
@@ -2964,19 +3047,23 @@
           const [targetW, targetH] = pageSizeOf(pageInfo);
           const newPage = outDoc.addPage([targetW, targetH]);
 
-          if (pageInfo.type === '編集後記') {
+          if (pageInfo.type === '編集後記' || pageInfo.type === '目次') {
             const hiCanvas = document.createElement('canvas');
-            const hiDpi = 2.5;
+            const hiDpi = pageInfo.type === '目次' ? 3 : 2.5;
             hiCanvas.width = targetW * hiDpi;
             hiCanvas.height = targetH * hiDpi;
             const hiCtx = hiCanvas.getContext('2d');
             hiCtx.fillStyle = '#FFFFFF';
             hiCtx.fillRect(0, 0, hiCanvas.width, hiCanvas.height);
 
-            await drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi, {
-              includeImages: true,
-              imageMaxDim: 2200
-            });
+            if (pageInfo.type === '目次') {
+              drawToc(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi);
+            } else {
+              await drawExactAfterword(hiCtx, hiCanvas.width, hiCanvas.height, hiDpi, {
+                includeImages: true,
+                imageMaxDim: 2200
+              });
+            }
 
             const pngUrl = hiCanvas.toDataURL('image/png');
             const pngImg = await outDoc.embedPng(pngUrl);
@@ -3080,6 +3167,11 @@
         const issueName = rawIssueName ? `〜${rawIssueName}〜` : '';
         const fileName = `ぴん球${issueName}　完成版.pdf`;
 
+        // 完成作品は、この端末のアーカイブに残す（あとで一覧から、保存・共有・圧縮ができる）
+        const archived = await archiveAutoSave(blob, fileName, rawIssueName, total);
+        const note = document.getElementById('archiveSavedNote');
+        if (note) note.textContent = archived ? '📚 アーカイブに保存しました（この端末のブラウザ内）' : '';
+
         // 発行完了に伴い、保持していた一時データは自動消去
         clearSavedStateInIndexedDB();
 
@@ -3126,6 +3218,7 @@
       clearAfterwordImages();
       document.getElementById('afterwordIssueName').value = '';
       document.getElementById('afterwordPublisher').value = '';
+      document.getElementById('tocText').value = TOC_DEFAULT;
       const today = new Date();
       const y = today.getFullYear();
       const m = today.getMonth() + 1;
@@ -3209,6 +3302,700 @@
         updateZoomDisplay();
       }
     });
+  </script>
+
+  <!-- ===== PDFツール（分割・圧縮・アーカイブ） ===== -->
+  <div id="toolsModal" class="tool-overlay" style="display:none;" onclick="if(event.target === this) closeTools()">
+    <div class="tool-card">
+      <div class="tool-head">
+        <span>🧰 PDFツール</span>
+        <button type="button" class="btn-icon" onclick="closeTools()">✕ 閉じる</button>
+      </div>
+      <div class="tool-tabs" id="toolTabs">
+        <button type="button" class="tool-tab" data-tab="split" onclick="switchToolTab('split')">✂ 分割（切り出し）</button>
+        <button type="button" class="tool-tab" data-tab="compress" onclick="switchToolTab('compress')">🗜 圧縮</button>
+        <button type="button" class="tool-tab" data-tab="archive" onclick="switchToolTab('archive')">📚 アーカイブ</button>
+      </div>
+      <div class="tool-body">
+        <!-- 対象のPDF（分割・並び替え・圧縮で共通） -->
+        <div id="toolSrc" class="tool-src">
+          <div class="tool-row" style="margin:0 0 6px;">
+            <button type="button" class="tool-btn" onclick="document.getElementById('toolFileInput').click()">📄 PDFを選ぶ</button>
+            <input type="file" id="toolFileInput" accept="application/pdf,.pdf" style="display:none" onchange="tlPickFile(this.files); this.value='';">
+            <select id="toolBodySelect" class="form-select" style="flex:1; min-width:150px;" onchange="tlPickFromBody(this.value)"></select>
+          </div>
+          <div id="toolSrcInfo" style="font-size:0.8rem; color:#0c4a6e; font-weight:600;">PDFが選ばれていません</div>
+        </div>
+
+        <!-- 分割（編集できるように、ページを切り出す） -->
+        <div class="tool-pane" id="pane-split" style="display:none;">
+          <h4>✂ ページを切り出す</h4>
+          <div class="tool-note">編集中のPDFや、アーカイブのPDFから、切り出したいページをタップして選びます（複数も可）。<br>・<b>編集中の本文</b>から切り出すと、その本文が、その場で分かれます。切り出したページは、1つの独立した本文として、並び替えや黒塗りができます。<br>・それ以外（表紙・裏表紙・アーカイブ・選んだPDF）から切り出すと、選んだページが、新しい本文として最後に追加されます。</div>
+          <div class="tool-row">
+            <button type="button" class="tool-sm" onclick="tlSplitAll(true)">すべて選ぶ</button>
+            <button type="button" class="tool-sm" onclick="tlSplitAll(false)">選びなおす</button>
+            <span id="splitInfo" style="font-size:0.78rem; color:#64748b;"></span>
+          </div>
+          <div class="pg-grid" id="splitGrid"></div>
+          <div class="tool-row"><button type="button" class="tool-btn green" id="btnSplitCut" onclick="tlSplitCut()" disabled>✂ 選んだページを切り出す</button></div>
+          <div id="splitResult"></div>
+        </div>
+
+        <!-- 圧縮 -->
+        <div class="tool-pane" id="pane-compress" style="display:none;">
+          <h4>🗜 PDFのサイズを小さくする</h4>
+          <div class="tool-note" style="background:#ecfdf5; border-color:#a7f3d0; color:#065f46;">文字は、そのまま（拡大してもきれいで、選択・検索もできます）。PDFの中の<b>写真・画像だけ</b>を軽くします。</div>
+          <div class="tool-row" style="flex-direction:column; align-items:flex-start;">
+            <label><input type="radio" name="cmpQ" value="high"> きれい優先 — 画像を高画質のまま（あまり小さくならない）</label>
+            <label><input type="radio" name="cmpQ" value="mid" checked> ふつう — LINEで送るのにおすすめ</label>
+            <label><input type="radio" name="cmpQ" value="low"> 小さく — 画像を少し粗くして、もっと軽く</label>
+          </div>
+          <label style="font-size:0.78rem; color:#92400e;"><input type="checkbox" id="cmpRaster"> 強力モード：ページ全体を画像にして作り直す（それでも大きいときの最終手段。文字が少しぼやけ、選択できなくなります）</label>
+          <div class="tool-row"><button type="button" class="tool-btn" id="btnCompress" onclick="tlDoCompress()">🗜 圧縮する</button></div>
+          <div class="tool-prog" id="cmpProgWrap" style="display:none;"><div id="cmpProg"></div></div>
+          <div id="cmpStatus" style="font-size:0.8rem; color:#475569;"></div>
+          <div id="compressResult"></div>
+        </div>
+
+        <!-- アーカイブ -->
+        <div class="tool-pane" id="pane-archive" style="display:none;">
+          <h4>📚 完成した作品のアーカイブ</h4>
+          <div class="tool-note">完成版を発行すると、自動でここに残ります。このパソコン（ブラウザ）の中だけに保存され、ネットには送られません。ブラウザの閲覧データを消すと、アーカイブも消えます。大事なPDFは、別に保存しておいてください。</div>
+          <div class="tool-row">
+            <label style="font-size:0.8rem;"><input type="checkbox" id="archAuto" onchange="tlArchAutoChange(this.checked)"> 発行したら、自動でアーカイブに残す</label>
+          </div>
+          <div class="tool-row">
+            <input type="text" id="archSearch" class="form-input" placeholder="名前で探す" oninput="renderArchive()" style="flex:1; min-width:140px;">
+            <button type="button" class="tool-sm" onclick="document.getElementById('archAddInput').click()">＋ 過去のPDFを追加</button>
+            <input type="file" id="archAddInput" accept="application/pdf,.pdf" multiple style="display:none" onchange="tlArchAdd(this.files); this.value='';">
+          </div>
+          <div id="archSummary" style="font-size:0.76rem; color:#64748b; margin-bottom:4px;"></div>
+          <div id="archList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================================
+    // 🧰 目次・並び替え・分割・圧縮・アーカイブ
+    // ========================================================
+    const tlEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const tlSizeText = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+    const tlBaseName = (name) => String(name || 'ぴん球').replace(/\.pdf$/i, '');
+    const tlSafeName = (s) => String(s).replace(/[\\/:*?"<>|]/g, '_');
+
+    // ---------- 目次 ----------
+    const TOC_DEFAULT = '巻頭言　　野部\n\nまるれんのこーなー　　練習係\n\n';   // はじめから入っている行（この下に書き足す）
+    document.getElementById('tocText').value = TOC_DEFAULT;
+    function getTocLines() {
+      const raw = (document.getElementById('tocText').value || '').replace(/\r/g, '').split('\n').map(s => s.replace(/\s+$/, ''));
+      while (raw.length && !raw[0].trim()) raw.shift();
+      while (raw.length && !raw[raw.length - 1].trim()) raw.pop();
+      return raw;
+    }
+    // 見本の画像（目次）の位置・大きさに合わせる: A4(595×842pt)で、見出し18pt・本文10.5pt・行送り18pt。左端は、ページ幅の約42%
+    function drawToc(ctx, w, h, scale) {
+      const serif = '"Yu Mincho", "Hiragino Mincho ProN", "MS Mincho", "Georgia", serif';
+      const pw = w / scale, ph = h / scale;
+      const lines = getTocLines();
+      let fs = 10.5, pitch = 18, left = pw * 0.425;
+      const y0 = ph * 0.2185, yMax = ph - 80;
+      if (lines.length * pitch > yMax - y0) { pitch = Math.max(8, (yMax - y0) / lines.length); fs = Math.min(fs, pitch * 0.62); }
+      ctx.font = `${fs * scale}px ${serif}`;
+      let maxW = 0;
+      lines.forEach(l => { maxW = Math.max(maxW, ctx.measureText(l).width / scale); });
+      const rightLimit = pw - 55;
+      if (left + maxW > rightLimit) left = Math.max(60, rightLimit - maxW);
+      if (left + maxW > rightLimit) { const k = (rightLimit - left) / maxW; fs *= k; ctx.font = `${fs * scale}px ${serif}`; }
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = `${18 * scale}px ${serif}`;
+      ctx.fillText('目次', (left + 12) * scale, ph * 0.138 * scale);
+      ctx.font = `${fs * scale}px ${serif}`;
+      ctx.fillStyle = '#111111';
+      lines.forEach((l, i) => { if (l.trim()) ctx.fillText(l, left * scale, (y0 + i * pitch) * scale); });
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // ---------- 黒塗りを、ページにつけたまま付け替える ----------
+    const _tlFileIds = new WeakMap();
+    let _tlFileSeq = 0;
+    let lastLayoutPages = [];
+    let _pageKeyAlias = null;   // 切り出しなどで、ページの持ち主のファイルが変わったときの、古い→新しいの対応
+    function pageKey(p) {
+      if (p.file) {
+        let id = _tlFileIds.get(p.file);
+        if (!id) { id = ++_tlFileSeq; _tlFileIds.set(p.file, id); }
+        return 'f' + id + ':' + (p.pageIndex || 0);
+      }
+      return 't:' + p.type;
+    }
+    function remapRedactionsTo(newPages) {
+      if (lastLayoutPages.length && Object.keys(redactions).length) {
+        const byKey = new Map();
+        lastLayoutPages.forEach((p, i) => { if (redactions[i] && redactions[i].length) byKey.set((_pageKeyAlias && _pageKeyAlias[pageKey(p)]) || pageKey(p), redactions[i]); });
+        _pageKeyAlias = null;
+        const nr = {};
+        newPages.forEach((p, i) => { const r = byKey.get(pageKey(p)); if (r) nr[i] = r; });
+        redactions = nr;
+      }
+      lastLayoutPages = newPages.slice();
+    }
+
+    // ---------- ドラッグで並び替え（マウス・指どちらも） ----------
+    function makeSortable(container, itemSel, handleSel, onMove) {
+      const dir = container.dataset.dir === 'h' ? 'h' : 'v';
+      Array.from(container.querySelectorAll(itemSel)).forEach(item => {
+        const handle = handleSel ? item.querySelector(handleSel) : item;
+        if (!handle) return;
+        handle.addEventListener('pointerdown', (e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          e.preventDefault();
+          const items = Array.from(container.querySelectorAll(itemSel));
+          const from = items.indexOf(item);
+          let ins = from;
+          item.classList.add('sortable-dragging');
+          try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+          const clear = () => items.forEach(i => i.classList.remove('drop-before', 'drop-after'));
+          const move = (ev) => {
+            clear();
+            let best = 0, bd = Infinity;
+            items.forEach((it, idx) => {
+              const r = it.getBoundingClientRect();
+              const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+              const d = dir === 'v' ? Math.abs(ev.clientY - cy) : Math.hypot(ev.clientX - cx, ev.clientY - cy);
+              if (d < bd) { bd = d; best = idx; }
+            });
+            const r = items[best].getBoundingClientRect();
+            const after = dir === 'v' ? ev.clientY > (r.top + r.bottom) / 2 : ev.clientX > (r.left + r.right) / 2;
+            ins = best + (after ? 1 : 0);
+            if (ins !== from && ins !== from + 1) items[best].classList.add(after ? 'drop-after' : 'drop-before');
+            // 端に近づいたら、スクロールする
+            const sc = container.scrollHeight > container.clientHeight + 2 ? container : container.closest('.tool-body');
+            if (sc) {
+              const cr = sc.getBoundingClientRect();
+              if (ev.clientY < cr.top + 28) sc.scrollTop -= 14;
+              else if (ev.clientY > cr.bottom - 28) sc.scrollTop += 14;
+            }
+          };
+          const up = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', up);
+            handle.removeEventListener('pointercancel', up);
+            item.classList.remove('sortable-dragging');
+            clear();
+            if (ins !== from && ins !== from + 1) onMove(from, ins > from ? ins - 1 : ins);
+          };
+          handle.addEventListener('pointermove', move);
+          handle.addEventListener('pointerup', up);
+          handle.addEventListener('pointercancel', up);
+        });
+      });
+    }
+
+    // 本文リストの並び替え
+    function moveBodyTo(from, to) {
+      const it = bodyFiles.splice(from, 1)[0];
+      bodyFiles.splice(to, 0, it);
+      renderBodyList();
+      debounceRefresh();
+    }
+    function sortBodyBy(kind) {
+      if (kind === 'name') bodyFiles.sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }));
+      else bodyFiles.reverse();
+      renderBodyList();
+      debounceRefresh();
+      showToast(kind === 'name' ? '名前順に並べました' : '逆の順にしました', '↕');
+    }
+
+    // ---------- 共通: 保存・共有・本文へ追加 ----------
+    function tlDownload(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { if (a.parentNode) a.parentNode.removeChild(a); URL.revokeObjectURL(url); }, 10000);
+    }
+    async function tlShare(blob, name) {
+      const f = new File([blob], name, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) {
+        try { await navigator.share({ files: [f] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+      }
+      tlDownload(blob, name);
+    }
+    function tlAddToBody(blob, name) {
+      const f = new File([blob], name, { type: 'application/pdf' });
+      bodyFiles.push({ file: f, name: f.name });
+      renderBodyList();
+      debounceRefresh();
+      showToast('本文に追加しました：' + name, '➕');
+    }
+    // 結果の一覧（分割・並び替え・圧縮で共通）。items: [{name, blob, meta}]
+    let _tlResultItems = [];
+    function tlRenderResults(el, items, withZip) {
+      const base = _tlResultItems.length;
+      items.forEach(it => _tlResultItems.push(it));
+      el.innerHTML =
+        items.map((it, i) => `<div class="tool-item"><div><div class="nm">${tlEsc(it.name)}</div><div class="meta">${tlEsc(it.meta || '')}　${tlSizeText(it.blob.size)}</div></div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="tool-sm" onclick="tlResultAct(${base + i}, 'save')">📥 保存</button>
+            <button type="button" class="tool-sm" onclick="tlResultAct(${base + i}, 'share')">📤 共有</button>
+            <button type="button" class="tool-sm" onclick="tlResultAct(${base + i}, 'body')">➕ 本文に追加</button>
+            <button type="button" class="tool-sm" onclick="tlResultAct(${base + i}, 'archive')">📚 アーカイブへ</button>
+          </div></div>`).join('');
+    }
+    async function tlResultAct(i, act) {
+      const it = _tlResultItems[i];
+      if (!it) return;
+      if (act === 'save') tlDownload(it.blob, it.name);
+      else if (act === 'share') tlShare(it.blob, it.name);
+      else if (act === 'body') tlAddToBody(it.blob, it.name);
+      else if (act === 'archive') { await archiveSave({ name: it.name, issue: '', blob: it.blob, pages: it.pages || 0, savedAt: Date.now() }); showToast('アーカイブに保存しました', '📚'); }
+    }
+    // ---------- ツールの開閉・対象のPDF ----------
+    let toolFile = null, toolDoc = null, toolPageCount = 0, toolTab = 'split', _toolLoadSeq = 0;
+    function openTools(tab) {
+      document.getElementById('toolsModal').style.display = 'flex';
+      tlFillBodySelect();
+      document.getElementById('archAuto').checked = localStorage.getItem('pinq_archive_auto') !== '0';
+      switchToolTab(tab || toolTab);
+    }
+    function openToolsWithResult(tab) {
+      if (typeof currentPdfBlob !== 'undefined' && currentPdfBlob) {
+        tlSetFile(new File([currentPdfBlob], currentPdfFileName || 'ぴん球_完成版.pdf', { type: 'application/pdf' }));
+      }
+      openTools(tab);
+    }
+    function closeTools() { document.getElementById('toolsModal').style.display = 'none'; }
+    async function tlFillBodySelect() {
+      const sel = document.getElementById('toolBodySelect');
+      const opts = ['<option value="">編集中・アーカイブのPDFから選ぶ…</option>'];
+      const add = (label, file, key) => { if (file && !isImageFile(file)) opts.push(`<option value="${key}">${tlEsc(label)}</option>`); };
+      opts.push('<optgroup label="編集中">');
+      add('表紙：' + (coverFile ? coverFile.name : ''), coverFile, 'c');
+      bodyFiles.forEach((b, i) => add('本文' + (i + 1) + '：' + b.name, b.file, 'b' + i));
+      add('裏表紙：' + (backCoverFile ? backCoverFile.name : ''), backCoverFile, 'k');
+      opts.push('</optgroup>');
+      sel.innerHTML = opts.join('');
+      try {
+        const arch = (await archiveAll()).sort((a, b) => b.savedAt - a.savedAt);
+        if (arch.length) sel.insertAdjacentHTML('beforeend', '<optgroup label="アーカイブ">' + arch.map(r => `<option value="a${r.id}">${tlEsc(r.name)}</option>`).join('') + '</optgroup>');
+      } catch (e) {}
+    }
+    async function tlPickFromBody(key) {
+      if (!key) return;
+      if (key[0] === 'a') {
+        const r = (await archiveAll()).find(x => x.id === parseInt(key.slice(1), 10));
+        if (r) tlSetFile(new File([r.blob], r.name, { type: 'application/pdf' }));
+        return;
+      }
+      const f = key === 'c' ? coverFile : key === 'k' ? backCoverFile : (bodyFiles[parseInt(key.slice(1), 10)] || {}).file;
+      if (f) tlSetFile(f);
+    }
+    function tlPickFile(files) { if (files && files[0]) tlSetFile(files[0]); }
+    async function tlSetFile(file) {
+      const seq = ++_toolLoadSeq;
+      const info = document.getElementById('toolSrcInfo');
+      info.textContent = '読み込み中…';
+      try {
+        const ab = await file.arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: new Uint8Array(ab.slice(0)) }).promise;
+        if (seq !== _toolLoadSeq) { try { doc.destroy(); } catch (e) {} return; }
+        if (toolDoc) { try { toolDoc.destroy(); } catch (e) {} }
+        toolFile = file; toolDoc = doc; toolPageCount = doc.numPages;
+        info.textContent = `📄 ${file.name}　（${toolPageCount}ページ・${tlSizeText(file.size)}）`;
+        ['splitResult', 'compressResult'].forEach(id => { document.getElementById(id).innerHTML = ''; });
+        tlSplitInit();
+        document.getElementById('cmpStatus').textContent = '';
+      } catch (e) {
+        console.error(e);
+        info.textContent = '⚠ このPDFを開けませんでした（パスワード付き・壊れたファイルの可能性）';
+      }
+    }
+    function switchToolTab(tab) {
+      toolTab = tab;
+      document.querySelectorAll('#toolTabs .tool-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      ['split', 'compress', 'archive'].forEach(t => { document.getElementById('pane-' + t).style.display = t === tab ? 'block' : 'none'; });
+      document.getElementById('toolSrc').style.display = tab === 'archive' ? 'none' : 'block';
+      if (tab === 'archive') renderArchive();
+    }
+    function tlNeedFile() { if (!toolFile) { alert('先に、対象のPDFを選んでください。'); return false; } return true; }
+
+    // ---------- 分割（編集できるように、ページを切り出す） ----------
+    function tlRangeLabel(idx) {
+      const out = []; let s = idx[0], prev = idx[0];
+      for (let i = 1; i <= idx.length; i++) {
+        if (i < idx.length && idx[i] === prev + 1) { prev = idx[i]; continue; }
+        out.push(s === prev ? '' + (s + 1) : (s + 1) + '-' + (prev + 1));
+        s = idx[i]; prev = idx[i];
+      }
+      return out.join(',');
+    }
+    let splitSel = new Set(), _splitSeq = 0, _splitThumbs = {};
+    function tlSplitInit() {
+      splitSel = new Set(); _splitThumbs = {};
+      tlSplitRender();
+    }
+    function tlSplitAll(on) {
+      splitSel = new Set(on ? Array.from({ length: toolPageCount }, (_, i) => i) : []);
+      document.querySelectorAll('#splitGrid .pg-item').forEach(el => el.classList.toggle('sel', splitSel.has(parseInt(el.dataset.i, 10))));
+      tlSplitUpdate();
+    }
+    function tlSplitToggle(i) {
+      if (splitSel.has(i)) splitSel.delete(i); else splitSel.add(i);
+      const el = document.querySelector(`#splitGrid .pg-item[data-i="${i}"]`);
+      if (el) el.classList.toggle('sel', splitSel.has(i));
+      tlSplitUpdate();
+    }
+    function tlSplitUpdate() {
+      document.getElementById('splitInfo').textContent = toolFile ? `${splitSel.size}ページ選択中（全${toolPageCount}ページ）` : '';
+      document.getElementById('btnSplitCut').disabled = !splitSel.size;
+    }
+    async function tlSplitRender() {
+      const grid = document.getElementById('splitGrid');
+      const seq = ++_splitSeq;
+      grid.innerHTML = toolFile ? Array.from({ length: toolPageCount }, (_, i) => `<div class="pg-item" data-i="${i}" onclick="tlSplitToggle(${i})"><div class="th" id="spth-${i}"></div><div class="no">P.${i + 1}</div></div>`).join('') : '<div class="tool-note">上で、PDFを選んでください。</div>';
+      tlSplitUpdate();
+      if (!toolFile) return;
+      for (let i = 0; i < toolPageCount; i++) {
+        if (seq !== _splitSeq) return;
+        const holder = document.getElementById('spth-' + i);
+        if (!holder) continue;
+        try {
+          if (!_splitThumbs[i]) {
+            const page = await toolDoc.getPage(i + 1);
+            const vp0 = page.getViewport({ scale: 1 });
+            const vp = page.getViewport({ scale: 140 / Math.max(vp0.width, vp0.height) });
+            const cv = document.createElement('canvas'); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+            const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+            await page.render({ canvasContext: cx, viewport: vp }).promise;
+            _splitThumbs[i] = cv;
+          }
+          if (seq !== _splitSeq) return;
+          const c = document.createElement('canvas'); const s = _splitThumbs[i];
+          c.width = s.width; c.height = s.height; c.getContext('2d').drawImage(s, 0, 0);
+          holder.innerHTML = ''; holder.appendChild(c);
+        } catch (e) { /* このページだけ、サムネイルなし */ }
+      }
+    }
+    async function tlSplitCut() {
+      if (!tlNeedFile()) return;
+      const sel = Array.from(splitSel).sort((a, b) => a - b);
+      if (!sel.length) { alert('切り出したいページを、タップして選んでください。'); return; }
+      const btn = document.getElementById('btnSplitCut'), res = document.getElementById('splitResult');
+      const bi = bodyFiles.findIndex(x => x.file === toolFile);
+      if (bi >= 0 && sel.length === toolPageCount) { res.innerHTML = '<div class="tool-note tool-warn">すべてのページを選んでいます。切り出すページだけを選んでください。</div>'; return; }
+      btn.disabled = true; res.innerHTML = '<div class="tool-note">切り出しています…</div>';
+      try {
+        const { PDFDocument } = PDFLib;
+        const src = await PDFDocument.load(await toolFile.arrayBuffer(), { ignoreEncryption: true });
+        const base = tlSafeName(tlBaseName(toolFile.name));
+        const mkFile = async (idx, name) => {
+          const out = await PDFDocument.create();
+          (await out.copyPages(src, idx)).forEach(p => out.addPage(p));
+          return new File([await out.save()], name, { type: 'application/pdf' });
+        };
+        if (bi >= 0) {
+          // 編集中の本文: その場で、「前の部分」「切り出したページ」「あとの部分」に分ける
+          const runs = [];
+          for (let i = 0; i < toolPageCount; i++) {
+            const s = splitSel.has(i), last = runs[runs.length - 1];
+            if (last && last.sel === s) last.idx.push(i); else runs.push({ sel: s, idx: [i] });
+          }
+          const pieces = [], alias = {};
+          for (const r of runs) {
+            const name = `${base}_P${tlRangeLabel(r.idx)}.pdf`;
+            const f = await mkFile(r.idx, name);
+            pieces.push({ file: f, name });
+            r.idx.forEach((pi, k) => { alias[pageKey({ file: toolFile, pageIndex: pi + 1 })] = pageKey({ file: f, pageIndex: k + 1 }); });
+          }
+          _pageKeyAlias = alias;
+          const oldName = toolFile.name;
+          bodyFiles.splice(bi, 1, ...pieces);
+          clearPdfDocCache();
+          renderBodyList(); debounceRefresh();
+          res.innerHTML = `<div class="tool-note" style="background:#ecfdf5; border-color:#a7f3d0; color:#065f46;">本文「${tlEsc(oldName)}」を、${pieces.length}つに分けました：<br>${pieces.map(p => '・' + tlEsc(p.name)).join('<br>')}<br>切り出したページは、独立した本文として、並び替え・黒塗りができます。</div>`;
+          toolFile = null; toolDoc = null; toolPageCount = 0;
+          document.getElementById('toolSrcInfo').textContent = 'PDFが選ばれていません';
+          tlFillBodySelect(); tlSplitInit();
+        } else {
+          const name = `${base}_P${tlRangeLabel(sel)}.pdf`;
+          const f = await mkFile(sel, name);
+          tlAddToBody(f, name);
+          res.innerHTML = `<div class="tool-note" style="background:#ecfdf5; border-color:#a7f3d0; color:#065f46;">選んだ${sel.length}ページを、新しい本文として追加しました（本文の最後）。</div>`;
+          const el = document.createElement('div'); res.appendChild(el);
+          tlRenderResults(el, [{ name, blob: f, meta: sel.length + 'ページ', pages: sel.length }], false);
+        }
+      } catch (e) { console.error(e); res.innerHTML = `<div class="tool-note tool-warn">切り出しに失敗しました：${tlEsc(e.message)}</div>`; }
+      btn.disabled = !splitSel.size;
+    }
+
+    // ---------- 圧縮（文字はそのまま。中の画像だけ作り直す） ----------
+    async function tlInflate(u8) {
+      const s = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate'));
+      return new Uint8Array(await new Response(s).arrayBuffer());
+    }
+    async function tlDeflate(u8) {
+      const s = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate'));
+      return new Uint8Array(await new Response(s).arrayBuffer());
+    }
+    // PNG予測（Predictor 10〜15）を元に戻す。8bit/成分だけ
+    function tlUnpredict(data, colors, columns) {
+      const rowBytes = columns * colors, stride = rowBytes + 1;
+      const rows = Math.floor(data.length / stride);
+      const out = new Uint8Array(rows * rowBytes);
+      for (let r = 0; r < rows; r++) {
+        const ft = data[r * stride];
+        for (let i = 0; i < rowBytes; i++) {
+          const x = data[r * stride + 1 + i];
+          const a = i >= colors ? out[r * rowBytes + i - colors] : 0;
+          const up = r > 0 ? out[(r - 1) * rowBytes + i] : 0;
+          const c = (r > 0 && i >= colors) ? out[(r - 1) * rowBytes + i - colors] : 0;
+          let v;
+          if (ft === 0) v = x;
+          else if (ft === 1) v = x + a;
+          else if (ft === 2) v = x + up;
+          else if (ft === 3) v = x + ((a + up) >> 1);
+          else if (ft === 4) { const p = a + up - c, pa = Math.abs(p - a), pb = Math.abs(p - up), pc = Math.abs(p - c); v = x + (pa <= pb && pa <= pc ? a : (pb <= pc ? up : c)); }
+          else v = x;
+          out[r * rowBytes + i] = v & 255;
+        }
+      }
+      return out;
+    }
+    // 1つの画像を、小さく作り直す。軽くなったときだけ置き換える（できなければ null）
+    async function tlRecompressImage(doc, ref, obj, preset) {
+      const { PDFName, PDFArray, PDFRawStream } = PDFLib;
+      const dict = obj.dict, ctx = doc.context;
+      const get = (k) => dict.get(PDFName.of(k));
+      const nm = (o) => (o && o.toString) ? o.toString() : '';
+      const num = (o, d) => (o && o.asNumber) ? o.asNumber() : d;
+      if (nm(get('Subtype')) !== '/Image') return null;
+      if (nm(get('ImageMask')) === 'true' || get('Decode') || get('Mask')) return null;
+      const w = num(get('Width'), 0), h = num(get('Height'), 0);
+      if (!w || !h || num(get('BitsPerComponent'), 8) !== 8) return null;
+      const before = obj.contents.length;
+      if (before < 30000) return null;
+      let cs = get('ColorSpace'), colors = 0;
+      if (cs && cs.constructor && cs.constructor.name === 'PDFRef') cs = ctx.lookup(cs);
+      if (cs instanceof PDFArray) {
+        const a = cs.asArray();
+        if (nm(a[0]) === '/ICCBased') { const st = ctx.lookup(a[1]); colors = num(st && st.dict && st.dict.get(PDFName.of('N')), 0); }
+      } else { const n = nm(cs); colors = n === '/DeviceRGB' ? 3 : n === '/DeviceGray' ? 1 : 0; }
+      if (colors !== 1 && colors !== 3) return null;
+      const f = get('Filter');
+      const filters = f instanceof PDFArray ? f.asArray().map(nm) : (f ? [nm(f)] : []);
+      if (filters.length > 1) return null;
+      let bitmap;
+      if (filters[0] === '/DCTDecode') {
+        bitmap = await createImageBitmap(new Blob([obj.contents], { type: 'image/jpeg' }), { imageOrientation: 'none' });
+      } else if (!filters.length || filters[0] === '/FlateDecode') {
+        let data = filters.length ? await tlInflate(obj.contents) : obj.contents;
+        let parms = get('DecodeParms');
+        if (parms instanceof PDFArray) parms = parms.asArray()[0];
+        const pred = num(parms && parms.get && parms.get(PDFName.of('Predictor')), 1);
+        const cols = num(parms && parms.get && parms.get(PDFName.of('Columns')), w);
+        if (pred >= 10) data = tlUnpredict(data, colors, cols);
+        else if (pred !== 1) return null;
+        if (data.length < w * h * colors) return null;
+        const rgba = new Uint8ClampedArray(w * h * 4);
+        for (let i = 0, j = 0, k = 0; i < w * h; i++) {
+          if (colors === 3) { rgba[j++] = data[k++]; rgba[j++] = data[k++]; rgba[j++] = data[k++]; }
+          else { const g = data[k++]; rgba[j++] = g; rgba[j++] = g; rgba[j++] = g; }
+          rgba[j++] = 255;
+        }
+        const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+        tmp.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0);
+        bitmap = await createImageBitmap(tmp);
+        tmp.width = 0;
+      } else return null;
+      let tw = w, th = h;
+      const mx = Math.max(w, h);
+      if (mx > preset.max && !get('SMask')) { const r = preset.max / mx; tw = Math.max(1, Math.round(w * r)); th = Math.max(1, Math.round(h * r)); }
+      const cv = document.createElement('canvas'); cv.width = tw; cv.height = th;
+      const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, tw, th);
+      cx.drawImage(bitmap, 0, 0, tw, th);
+      if (bitmap.close) bitmap.close();
+      const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', preset.q));
+      cv.width = 0;
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      if (bytes.length >= before * 0.92) return null;
+      const nd = ctx.obj({ Type: 'XObject', Subtype: 'Image', Width: tw, Height: th, ColorSpace: 'DeviceRGB', BitsPerComponent: 8, Filter: 'DCTDecode', Length: bytes.length });
+      if (get('SMask')) nd.set(PDFName.of('SMask'), get('SMask'));
+      ctx.assign(ref, PDFRawStream.of(nd, bytes));
+      return { before, after: bytes.length };
+    }
+    async function tlCompressSmart(file, preset, onProgress) {
+      const { PDFDocument, PDFName, PDFRawStream } = PDFLib;
+      const doc = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true, updateMetadata: false });
+      const entries = Array.from(doc.context.enumerateIndirectObjects());
+      let imgs = 0, packed = 0;
+      for (let i = 0; i < entries.length; i++) {
+        const [ref, obj] = entries[i];
+        if (obj instanceof PDFRawStream) {
+          try {
+            const r = await tlRecompressImage(doc, ref, obj, preset);
+            if (r) imgs++;
+            else {
+              const d = obj.dict, ty = String(d.get(PDFName.of('Type')) || ''), st = String(d.get(PDFName.of('Subtype')) || '');
+              if (!d.get(PDFName.of('Filter')) && st !== '/Image' && ty !== '/XRef' && ty !== '/ObjStm' && obj.contents.length > 1024) {
+                const z = await tlDeflate(obj.contents);
+                if (z.length < obj.contents.length) {
+                  d.set(PDFName.of('Filter'), PDFName.of('FlateDecode'));
+                  d.set(PDFName.of('Length'), PDFLib.PDFNumber.of(z.length));
+                  doc.context.assign(ref, PDFRawStream.of(d, z));
+                  packed++;
+                }
+              }
+            }
+          } catch (e) { console.warn('画像の圧縮をスキップ:', e); }
+        }
+        if (i % 4 === 0) { onProgress(i / entries.length); await new Promise(r => setTimeout(r, 0)); }
+      }
+      const bytes = await doc.save({ useObjectStreams: true });
+      return { bytes, imgs, packed };
+    }
+    async function tlDoCompress() {
+      if (!tlNeedFile()) return;
+      const q = document.querySelector('input[name="cmpQ"]:checked').value;
+      const raster = document.getElementById('cmpRaster').checked;
+      const preset = { high: { dpi: 150, q: 0.82, max: 2600 }, mid: { dpi: 110, q: 0.7, max: 1800 }, low: { dpi: 80, q: 0.55, max: 1300 } }[q];
+      const btn = document.getElementById('btnCompress');
+      const prog = document.getElementById('cmpProg'), wrap = document.getElementById('cmpProgWrap'), st = document.getElementById('cmpStatus');
+      const res = document.getElementById('compressResult');
+      btn.disabled = true; res.innerHTML = ''; wrap.style.display = 'block'; prog.style.width = '0%';
+      try {
+        let blob, note = '';
+        if (!raster) {
+          st.textContent = 'PDFの中の画像を調べて、軽くしています…';
+          const r = await tlCompressSmart(toolFile, preset, (x) => { prog.style.width = Math.round(x * 100) + '%'; });
+          blob = new Blob([r.bytes], { type: 'application/pdf' });
+          note = r.imgs ? `画像 ${r.imgs} 枚を軽くしました（文字はそのままです）。` : '軽くできる画像が、ほとんどありませんでした。';
+        } else {
+          blob = await tlCompressRaster(toolFile, preset, (i, n) => { st.textContent = `${i} / ${n} ページを処理中…`; prog.style.width = Math.round(i / n * 100) + '%'; });
+          note = 'ページ全体を画像にして作り直しました（文字の選択はできません）。';
+        }
+        const before = toolFile.size, after = blob.size;
+        st.textContent = '';
+        if (after >= before) {
+          res.innerHTML = `<div class="tool-note tool-warn">これ以上は小さくなりませんでした（${tlSizeText(before)} → ${tlSizeText(after)}）。${tlEsc(note)}<br>このPDFは、画像ではなく、文字（フォント）のデータが大半のようです。それでも小さくしたいときは、「小さく」を選ぶか、「強力モード」を試してください。</div>`;
+        } else {
+          const pct = Math.round((1 - after / before) * 100);
+          res.innerHTML = `<div class="tool-note" style="background:#ecfdf5; border-color:#a7f3d0; color:#065f46; font-weight:700;">${tlSizeText(before)} → ${tlSizeText(after)}（${pct}% 小さくなりました）<div style="font-weight:400; font-size:0.78rem;">${tlEsc(note)}</div></div><div id="cmpItems"></div>`;
+          tlRenderResults(document.getElementById('cmpItems'), [{ name: tlSafeName(tlBaseName(toolFile.name)) + '_圧縮.pdf', blob, meta: '圧縮後', pages: toolPageCount }], false);
+        }
+      } catch (e) { console.error(e); st.textContent = ''; res.innerHTML = `<div class="tool-note tool-warn">圧縮に失敗しました：${tlEsc(e.message)}</div>`; }
+      wrap.style.display = 'none'; btn.disabled = false;
+    }
+    // 強力モード: ページ全体を画像にして作り直す
+    async function tlCompressRaster(file, preset, onPage) {
+      const { PDFDocument } = PDFLib;
+      const out = await PDFDocument.create();
+      for (let i = 1; i <= toolPageCount; i++) {
+        onPage(i, toolPageCount);
+        const page = await toolDoc.getPage(i);
+        const vp1 = page.getViewport({ scale: 1 });
+        let sc = preset.dpi / 72;
+        const maxPx = 16000000;
+        if (vp1.width * sc * vp1.height * sc > maxPx) sc = Math.sqrt(maxPx / (vp1.width * vp1.height));
+        const vp = page.getViewport({ scale: sc });
+        const cv = document.createElement('canvas'); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+        const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: cx, viewport: vp }).promise;
+        const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', preset.q));
+        const img = await out.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+        out.addPage([vp1.width, vp1.height]).drawImage(img, { x: 0, y: 0, width: vp1.width, height: vp1.height });
+        cv.width = 0; cv.height = 0;
+        if (page.cleanup) page.cleanup();
+        await new Promise(r => setTimeout(r, 0));
+      }
+      return new Blob([await out.save()], { type: 'application/pdf' });
+    }
+
+    // ---------- アーカイブ（完成した作品の一覧。この端末のブラウザ内だけ） ----------
+    async function archiveSave(rec) {
+      const db = await openIndexedDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(ARCHIVE_STORE, 'readwrite');
+        const r = tx.objectStore(ARCHIVE_STORE).add({ name: rec.name, issue: rec.issue || '', blob: rec.blob, size: rec.blob.size, pages: rec.pages || 0, savedAt: rec.savedAt || Date.now() });
+        tx.oncomplete = () => resolve(r.result);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    }
+    async function archiveAutoSave(blob, name, issue, pages) {
+      if (localStorage.getItem('pinq_archive_auto') === '0') return false;
+      try { await archiveSave({ name, issue, blob, pages }); return true; } catch (e) { console.warn('アーカイブ保存失敗:', e); return false; }
+    }
+    async function archiveAll() {
+      const db = await openIndexedDB();
+      return new Promise((resolve) => {
+        const req = db.transaction(ARCHIVE_STORE, 'readonly').objectStore(ARCHIVE_STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
+    }
+    async function archiveDelete(id) {
+      const db = await openIndexedDB();
+      return new Promise((resolve) => { const tx = db.transaction(ARCHIVE_STORE, 'readwrite'); tx.objectStore(ARCHIVE_STORE).delete(id); tx.oncomplete = () => resolve(); tx.onerror = () => resolve(); });
+    }
+    async function archiveUpdate(rec) {
+      const db = await openIndexedDB();
+      return new Promise((resolve) => { const tx = db.transaction(ARCHIVE_STORE, 'readwrite'); tx.objectStore(ARCHIVE_STORE).put(rec); tx.oncomplete = () => resolve(); tx.onerror = () => resolve(); });
+    }
+    function tlArchAutoChange(on) { localStorage.setItem('pinq_archive_auto', on ? '1' : '0'); }
+    let _archCache = [];
+    async function renderArchive() {
+      const list = document.getElementById('archList');
+      _archCache = (await archiveAll()).sort((a, b) => b.savedAt - a.savedAt);
+      const q = (document.getElementById('archSearch').value || '').trim().toLowerCase();
+      const rows = _archCache.filter(r => !q || (r.name + ' ' + r.issue).toLowerCase().includes(q));
+      const total = _archCache.reduce((s, r) => s + (r.size || 0), 0);
+      let usage = '';
+      try { if (navigator.storage && navigator.storage.estimate) { const e = await navigator.storage.estimate(); if (e.quota) usage = `（このブラウザの保存領域の約 ${(total / e.quota * 100).toFixed(1)}%）`; } } catch (e) {}
+      document.getElementById('archSummary').textContent = `${_archCache.length}件・合計 ${tlSizeText(total)} ${usage}`;
+      if (!rows.length) { list.innerHTML = '<div class="tool-note">' + (_archCache.length ? '該当するものがありません。' : 'まだ何もありません。完成版を発行すると、ここに残ります。') + '</div>'; return; }
+      let html = '', year = null;
+      rows.forEach(r => {
+        const d = new Date(r.savedAt), y = d.getFullYear();
+        if (y !== year) { html += `<div style="font-weight:700; margin:10px 0 2px; color:#0f766e;">${y}年</div>`; year = y; }
+        const when = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        html += `<div class="tool-item"><div><div class="nm">${tlEsc(r.issue ? '〜' + r.issue + '〜 ' : '')}${tlEsc(r.name)}</div><div class="meta">${when} 保存　${r.pages ? r.pages + 'ページ　' : ''}${tlSizeText(r.size || 0)}</div></div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="tool-sm" onclick="tlArchAct(${r.id}, 'save')">📥 保存</button>
+            <button type="button" class="tool-sm" onclick="tlArchAct(${r.id}, 'share')">📤 共有</button>
+            <button type="button" class="tool-sm" onclick="tlArchAct(${r.id}, 'open')">📄 開く</button>
+            <button type="button" class="tool-sm" onclick="tlArchAct(${r.id}, 'compress')">🗜 圧縮</button>
+            <button type="button" class="tool-sm" onclick="tlArchAct(${r.id}, 'rename')">✏ 名前</button>
+            <button type="button" class="tool-sm danger" onclick="tlArchAct(${r.id}, 'delete')">🗑 削除</button>
+          </div></div>`;
+      });
+      list.innerHTML = html;
+    }
+    async function tlArchAct(id, act) {
+      const r = _archCache.find(x => x.id === id);
+      if (!r) return;
+      if (act === 'save') tlDownload(r.blob, r.name);
+      else if (act === 'share') tlShare(r.blob, r.name);
+      else if (act === 'open') { const u = URL.createObjectURL(r.blob); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+      else if (act === 'compress') { await tlSetFile(new File([r.blob], r.name, { type: 'application/pdf' })); switchToolTab('compress'); }
+      else if (act === 'rename') { const n = prompt('名前を変更', r.name); if (n && n.trim()) { r.name = n.trim().endsWith('.pdf') ? n.trim() : n.trim() + '.pdf'; await archiveUpdate(r); renderArchive(); } }
+      else if (act === 'delete') { if (confirm('「' + r.name + '」をアーカイブから削除しますか？（元に戻せません）')) { await archiveDelete(id); renderArchive(); } }
+    }
+    async function tlArchAdd(files) {
+      let n = 0;
+      for (const f of Array.from(files || [])) {
+        if (!(f.type.includes('pdf') || /\.pdf$/i.test(f.name))) continue;
+        let pages = 0;
+        try { pages = (await PDFLib.PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true })).getPageCount(); } catch (e) {}
+        await archiveSave({ name: f.name, issue: '', blob: f, pages, savedAt: f.lastModified || Date.now() });
+        n++;
+      }
+      if (n) showToast(n + '件をアーカイブに追加しました', '📚');
+      renderArchive();
+    }
   </script>
 
 </body>
