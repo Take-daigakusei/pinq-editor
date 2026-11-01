@@ -832,7 +832,7 @@
           <div class="section-title">
             <span>目次（表紙の次のページに入ります）</span>
           </div>
-          <textarea class="form-textarea" id="tocText" rows="9" placeholder="1行に1項目。空の行は、そのまま空きになります。" oninput="debounceRefresh()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:0.85rem; font-family:inherit; line-height:1.5;"></textarea>
+          <textarea class="form-textarea" id="tocText" rows="9" placeholder="1行に1項目。空の行は、そのまま空きになります。" oninput="textEditRefresh()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:0.85rem; font-family:inherit; line-height:1.5;"></textarea>
         </div>
 
         <!-- 2. 本文 -->
@@ -891,7 +891,7 @@
               
               <div style="margin-bottom:6px;">
                 <label class="form-label">号名（サブタイトル）</label>
-                <input type="text" class="form-input" id="afterwordIssueName" value="" placeholder="例: 早慶戦号" oninput="debounceRefresh()">
+                <input type="text" class="form-input" id="afterwordIssueName" value="" placeholder="例: 早慶戦号" oninput="textEditRefresh()">
                 <span style="font-size:0.72rem; color:#94a3b8; margin-top:2px; display:block;">入力すると自動で「〜早慶戦号〜」の形式になります</span>
               </div>
 
@@ -900,12 +900,12 @@
                   <label class="form-label" style="margin-bottom:0;">発行日</label>
                   <button type="button" class="btn-icon" onclick="resetDateToToday()" style="font-size:0.72rem; color:var(--primary); font-weight:700; padding:2px 4px; min-height:auto;">今日の日付に戻す</button>
                 </div>
-                <input type="text" class="form-input" id="afterwordDate" placeholder="例: 2026年9月16日発行" oninput="debounceRefresh()">
+                <input type="text" class="form-input" id="afterwordDate" placeholder="例: 2026年9月16日発行" oninput="textEditRefresh()">
               </div>
 
               <div style="margin-bottom:6px;">
                 <label class="form-label">発行責任者</label>
-                <input type="text" class="form-input" id="afterwordPublisher" placeholder="例: 山田太郎" oninput="debounceRefresh()">
+                <input type="text" class="form-input" id="afterwordPublisher" placeholder="例: 山田太郎" oninput="textEditRefresh()">
               </div>
 
               <div>
@@ -2121,6 +2121,27 @@
         refreshPreview();
         debounceSaveState();
       }, 250);
+    }
+
+    // 目次・編集後記の文字入力中は、全ページを作り直さず、そのページだけ描き直す（画面がちらつかない）
+    let textEditTimeout = null;
+    function textEditRefresh() {
+      clearTimeout(textEditTimeout);
+      textEditTimeout = setTimeout(async () => {
+        const cards = editorMode === 'scroll' ? Array.from(document.querySelectorAll('.page-scroll-card')) : [];
+        const targets = cards.filter(c => { const pi = combinedPages[parseInt(c.dataset.pageIndex, 10)]; return pi && (pi.type === '目次' || pi.type === '編集後記'); });
+        if (!targets.length || targets.length !== combinedPages.filter(x => x.type === '目次' || x.type === '編集後記').length) { debounceRefresh(); return; }
+        for (const card of targets) {
+          const pIdx = parseInt(card.dataset.pageIndex, 10);
+          const canvas = card.querySelector('canvas');
+          if (!canvas) continue;   // 画面外のページは、見えたときに新しい内容で描かれる
+          const cssW = parseFloat(canvas.style.width), cssH = parseFloat(canvas.style.height);   // いま表示している大きさのまま描き直す
+          const tmp = document.createElement('canvas');
+          await renderPageContent(combinedPages[pIdx], pIdx, tmp, cssW, cssH, canvas.width / cssW);
+          if (tmp.width === canvas.width && tmp.height === canvas.height) canvas.getContext('2d').drawImage(tmp, 0, 0);
+        }
+        debounceSaveState();
+      }, 150);
     }
 
     function getSelectedPaperSize() {
